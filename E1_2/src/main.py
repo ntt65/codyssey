@@ -187,7 +187,7 @@ class QuizController:
         self.view = QuizView()
 
     def play_quiz(self):
-≈       input("\nunder construction... (엔터를 눌러 메인 메뉴로 돌아갑니다)")
+≈       input("\nunder construction... (엔터를 눌러 메인 메뉴로 돌아갑니다 )")
 
     def run(self):
         try:
