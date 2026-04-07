@@ -33,7 +33,7 @@ DEFAULT_QUIZZES = [
 
 
 ### 2. `quizGame.py` (데이터 관리 모델)
-`state.json` 파일을 관리하며, 퀴즈 목록과 **최고 점수**, **보너스용 히스토리**를 저장하고 불러옵니다.
+# state.json` 파일을 관리하며, 퀴즈 목록과 **최고 점수**, **보너스용 히스토리**를 저장하고 불러옵니다.
 
 
 import json
@@ -190,9 +190,8 @@ class QuizController:
 ≈       미션의 요구사항(MVC 패턴, 데이터 영속성, 예외 처리)과 요청하신 **보너스 기능(삭제, 기록, 랜덤/수량 선택)** 및 **특수 문자가 없는 파이썬 문법 퀴즈**를 반영한 전체 코드를 구성해 드립니다. 코드는 총 4개의 파일(`quiz.py`, `quizGame.py`, `quizView.py`, `main.py`)로 나뉩니다.
 
 ### 1. `quiz.py` (개별 퀴즈 모델)
-개별 퀴즈의 속성을 정의하고, 객체와 딕셔너리 간 변환을 담당합니다. 또한 특수 문자를 배제한 파이썬 문법 기본 문제를 포함합니다.
+# 개별 퀴즈의 속성을 정의하고, 객체와 딕셔너리 간 변환을 담당합니다. 또한 특수 문자를 배제한 파이썬 문법 기본 문제를 포함합니다.
 
-```python
 class Quiz:
     def __init__(self, question, choices, answer):
         self.question = question # 문제 (str)
@@ -224,12 +223,12 @@ DEFAULT_QUIZZES = [
     Quiz("리스트의 맨 끝에 새로운 요소를 추가하는 메서드는 무엇인가요", ["add", "push", "append", "insert"], 3),
     Quiz("조건에 따라 코드를 실행할지 결정하는 키워드는 무엇인가요", ["if", "for", "while", "def"], 1)
 ]
-```
+
 
 ### 2. `quizGame.py` (데이터 관리 모델)
-`state.json` 파일을 관리하며, 퀴즈 목록과 **최고 점수**, **보너스용 히스토리**를 저장하고 불러옵니다.
+# `state.json` 파일을 관리하며, 퀴즈 목록과 **최고 점수**, **보너스용 히스토리**를 저장하고 불러옵니다.
 
-```python
+
 import json
 import os
 from quiz import Quiz, DEFAULT_QUIZZES
@@ -307,9 +306,7 @@ class QuizModel:
 ```
 
 ### 3. `quizView.py` (화면 출력 및 입력 뷰)
-사용자 인터페이스와 미션 필수 예외 처리(공백 제거, 숫자 검증 등)를 담당합니다.
-
-```python
+# 사용자 인터페이스와 미션 필수 예외 처리(공백 제거, 숫자 검증 등)를 담당합니다.
 class QuizView:
     def display_menu(self):
         print("\n" + "="*30)
@@ -363,12 +360,10 @@ class QuizView:
         print("\n[게임 기록 히스토리]")
         for h in history:
             print(f"- {h['date']} | 점수: {h['score']}점 ({h['correct']}/{h['total']})")
-```
 
 ### 4. `main.py` (전체 흐름 제어 컨트롤러)
-`QuizController`를 통해 전체 게임 루프를 실행하며 보너스 로직(랜덤 섞기 등)을 제어합니다.
+# `QuizController`를 통해 전체 게임 루프를 실행하며 보너스 로직(랜덤 섞기 등)을 제어합니다.
 
-```python
 import random
 from datetime import datetime
 from quizGame import QuizModel
@@ -437,9 +432,6 @@ class QuizController:
 
 if __name__ == "__main__":
     QuizController().run()
-```
-
-이 코드는 모든 미션 요구사항을 충족하며, **`state.json`** 하나에 퀴즈와 점수, 히스토리를 통합 관리하여 데이터 영속성을 보장합니다.
 
     def run(self):
         try:
