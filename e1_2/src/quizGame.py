@@ -174,3 +174,12 @@ class QuizModel:
             self._save_data()
             return True
         return False
+
+    def add_history(self, record):
+        """게임 기록 추가 (보너스 기능)
+        
+        Args:
+            record (dict): {"date": str, "score": int, "correct": int, "total": int}
+        """
+        self.history.append(record)
+        self._save_data()
