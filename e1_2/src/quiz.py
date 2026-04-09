@@ -32,3 +32,15 @@ class Quiz:
             bool: 정답 여부
         """
         return user_answer == self.answer
+    
+    def to_dict(self):
+        """Quiz 객체를 JSON 저장 가능한 딕셔너리로 변환
+        
+        Returns:
+            dict: {\"question\": str, \"choices\": list, \"answer\": int}
+        """
+        return {
+            "question": self.question,
+            "choices": self.choices,
+            "answer": self.answer,
+        }
