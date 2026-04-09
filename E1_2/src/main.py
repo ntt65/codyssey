@@ -69,29 +69,3 @@ class QuizController:
 
 if __name__ == "__main__":
     QuizController().run()
-
-if __name__ == "__main__":
-    QuizController().run()
-
-    def run(self):
-        try:
-            while True:
-                self.view.display_menu()
-                choice = self.view.get_valid_number("선택: ", 1, 7)
-                if choice == 1: self.play_quiz()
-                elif choice == 2:
-                    q_data = self.view.get_new_quiz_input()
-                    self.model.add_quiz(Quiz(*q_data))
-                elif choice == 3: self.view.show_quiz_list(self.model.quizzes)
-                elif choice == 4: self.view.show_message(f"🔥 최고 점수: {self.model.best_score}점")
-                elif choice == 5:
-                    self.view.show_quiz_list(self.model.quizzes)
-                    idx = self.view.get_valid_number("삭제할 번호: ", 1, len(self.model.quizzes))
-                    self.model.delete_quiz(idx-1)
-                elif choice == 6: self.view.show_history(self.model.history)
-                elif choice == 7: break
-        except (KeyboardInterrupt, EOFError):
-            self.view.show_message("\n\n👋 안전하게 종료합니다.")
-
-if __name__ == "__main__":
-    QuizController().run()
