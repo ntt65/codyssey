@@ -21,3 +21,14 @@ class Quiz:
         self.question = question  # 문제 (str)
         self.choices = choices    # 선택지 4개 (list)
         self.answer = answer      # 정답 번호 (int, 1~4)
+    
+    def is_correct(self, user_answer):
+        """사용자의 정답과 정확한 정답을 비교
+        
+        Args:
+            user_answer (int): 사용자가 입력한 정답 번호
+            
+        Returns:
+            bool: 정답 여부
+        """
+        return user_answer == self.answer
