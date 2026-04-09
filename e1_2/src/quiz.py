@@ -44,3 +44,24 @@ class Quiz:
             "choices": self.choices,
             "answer": self.answer,
         }
+    
+    @staticmethod
+    def from_dict(data):
+        """JSON 데이터에서 Quiz 객체 생성
+        
+        Args:
+            data (dict): {\"question\": str, \"choices\": list, \"answer\": int} 형식
+            
+        Returns:
+            Quiz: 생성된 Quiz 객체
+        """
+        return Quiz(data["question"], data["choices"], data["answer"])
+
+# 파이썬 문법 기본 퀴즈 데이터 (미션 요구: 5개 이상)
+DEFAULT_QUIZZES = [
+    Quiz("파이썬에서 함수를 정의할 때 사용하는 키워드는 무엇인가요", ["func", "define", "def", "function"], 3),
+    Quiz("다음 중 파이썬의 기본 데이터 타입이 아닌 것은 무엇인가요", ["int", "str", "bool", "char"], 4),
+    Quiz("화면에 값을 출력하기 위해 사용하는 함수는 무엇인가요", ["input", "print", "write", "show"], 2),
+    Quiz("리스트의 맨 끝에 새로운 요소를 추가하는 메서드는 무엇인가요", ["add", "push", "append", "insert"], 3),
+    Quiz("조건에 따라 코드를 실행할지 결정하는 키워드는 무엇인가요", ["if", "for", "while", "def"], 1)
+]
