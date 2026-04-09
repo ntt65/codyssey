@@ -123,3 +123,13 @@ class QuizModel:
         except IOError:
             # 저장 실패 시 먹음 처리 (프로그램 중단 없음)
             pass
+
+    def _reset_to_default(self):
+        """데이터를 기본값으로 초기화
+        
+        기본 퀴즈 데이터로 복구하고 점수/히스토리 초기화
+        """
+        # 선택지 리스트 복사본 생성 (불변성 보장)
+        self.quizzes = [Quiz(q.question, q.choices[:], q.answer) for q in DEFAULT_QUIZZES]
+        self.best_score = 0
+        self.history = []
