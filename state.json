@@ -1,55 +1,63 @@
 {
-    "quizzes": [
-        {
-            "question": "파이썬의 창시자는?",
-            "choices": [
-                "제임스 고슬링",
-                "리누스 토르발스",
-                "귀도 반 로섬",
-                "브렌던 아이크"
-            ],
-            "answer": 3
-        },
-        {
-            "question": "파이썬 내장 데이터 타입이 아닌 것은?",
-            "choices": [
-                "int",
-                "str",
-                "bool",
-                "char"
-            ],
-            "answer": 4
-        },
-        {
-            "question": "원격 저장소로 업로드하는 Git 명령어는?",
-            "choices": [
-                "git pull",
-                "git commit",
-                "git push",
-                "git clone"
-            ],
-            "answer": 3
-        },
-        {
-            "question": "JSON의 약자는?",
-            "choices": [
-                "Java Standard Object Notation",
-                "JavaScript Object Notation",
-                "Java Syntax Output Network",
-                "JavaScript Online Node"
-            ],
-            "answer": 2
-        },
-        {
-            "question": "파이썬 함수 정의 키워드는?",
-            "choices": [
-                "func",
-                "define",
-                "def",
-                "function"
-            ],
-            "answer": 3
-        }
-    ],
-    "best_score": 20
+  "quizzes": [
+    {
+      "question": "파이썬의 창시자는?",
+      "choices": [
+        "제임스 고슬링",
+        "리누스 토르발스",
+        "귀도 반 로섬",
+        "브렌던 아이크"
+      ],
+      "answer": 3
+    },
+    {
+      "question": "파이썬 내장 데이터 타입이 아닌 것은?",
+      "choices": [
+        "int",
+        "str",
+        "bool",
+        "char"
+      ],
+      "answer": 4
+    },
+    {
+      "question": "원격 저장소로 업로드하는 Git 명령어는?",
+      "choices": [
+        "git pull",
+        "git commit",
+        "git push",
+        "git clone"
+      ],
+      "answer": 3
+    },
+    {
+      "question": "JSON의 약자는?",
+      "choices": [
+        "Java Standard Object Notation",
+        "JavaScript Object Notation",
+        "Java Syntax Output Network",
+        "JavaScript Online Node"
+      ],
+      "answer": 2
+    },
+    {
+      "question": "파이썬 함수 정의 키워드는?",
+      "choices": [
+        "func",
+        "define",
+        "def",
+        "function"
+      ],
+      "answer": 3
+    }
+  ],
+  "best_score": 20,
+  "history": [
+    {
+      "date": "2026-04-09 13:14",
+      "score": 0,
+      "correct": 0,
+      "total": 1
+    }
+  ]
 }
