@@ -30,3 +30,11 @@ class QuizView:
         print("6. 전체 기록 보기 (보너스)")
         print("7. 게임 종료")
         print("="*30)
+
+    def show_message(self, msg):
+        """메시지 출력
+        
+        Args:
+            msg (str): 출력할 메시지
+        """
+        print(msg)
