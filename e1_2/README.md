@@ -137,6 +137,108 @@ sequenceDiagram
     M->>M: state.json에 데이터 저장 (_save_data)
     C->>V: 최종 점수 및 결과 화면 출력
 ```
+### Sequence Diagram Detail
+```mermaid
+---
+config:
+  theme: mc
+---
+sequenceDiagram
+    participant User
+    participant Main as main.py
+    participant Controller as QuizController
+    participant View as QuizView
+    participant Model as QuizModel
+    participant FileSystem as state.json
+
+    User->>Main: python main.py 실행
+    Main->>Controller: QuizController()
+    Controller->>Model: QuizModel()
+    Model->>FileSystem: state.json 읽기
+    FileSystem-->>Model: 데이터 로드
+    Model-->>Controller: 초기화 완료
+    Controller-->>Main: 준비 완료
+
+    loop 메인 루프
+        Controller->>View: display_menu()
+        View->>User: 메뉴 표시
+        User->>View: 선택 입력 (1~7)
+        View->>View: get_valid_number() 검증
+        View-->>Controller: 선택값 반환
+
+        alt 선택 = 1 (퀴즈 풀기)
+            Controller->>View: get_valid_number(문제수)
+            View->>User: 풀 문제 수 입력
+            User-->>View: 숫자 입력
+            View-->>Controller: 검증된 숫자
+            Controller->>Model: quizzes 가져오기
+            Model-->>Controller: Quiz 리스트
+            loop 각 문제마다
+                Controller->>View: show_message(문제)
+                View->>User: 문제와 선택지 출력
+                User->>View: 정답 번호 입력
+                View-->>Controller: 검증된 정답번호
+                Controller->>Model: is_correct(정답번호)
+                Model-->>Controller: True/False
+                Controller->>View: show_message(✅/❌)
+                View->>User: 결과 출력
+            end
+            Controller->>Model: add_history(기록)
+            Controller->>Model: update_best_score(점수)
+            Model->>FileSystem: _save_data() 저장
+            FileSystem-->>Model: 저장 완료
+            Controller->>View: show_message(최종점수)
+            View->>User: 점수 출력
+
+        else 선택 = 2 (퀴즈 추가)
+            Controller->>View: get_new_quiz_input()
+            View->>User: 문제/선택지/정답 입력
+            User-->>View: 데이터 입력
+            View-->>Controller: 검증된 퀴즈 데이터
+            Controller->>Model: add_quiz(새로운Quiz)
+            Model->>Model: quizzes.append()
+            Model->>FileSystem: _save_data() 저장
+            FileSystem-->>Model: 저장 완료
+
+        else 선택 = 3 (퀴즈 목록 보기)
+            Controller->>Model: quizzes 가져오기
+            Model-->>Controller: Quiz 리스트
+            Controller->>View: show_quiz_list(quizzes)
+            View->>User: 퀴즈 목록 출력
+
+        else 선택 = 4 (최고 점수 확인)
+            Controller->>Model: best_score 확인
+            Model-->>Controller: 점수값
+            Controller->>View: show_message(최고점수)
+            View->>User: 최고점수 출력
+
+        else 선택 = 5 (퀴즈 삭제)
+            Controller->>View: show_quiz_list(quizzes)
+            View->>User: 퀴즈 목록 출력
+            User->>View: 삭제할 번호 입력
+            View-->>Controller: 검증된 인덱스
+            Controller->>Model: delete_quiz(인덱스)
+            Model->>Model: del quizzes[index]
+            Model->>FileSystem: _save_data() 저장
+            FileSystem-->>Model: 저장 완료
+
+        else 선택 = 6 (기록 보기)
+            Controller->>Model: history 가져오기
+            Model-->>Controller: 히스토리 리스트
+            Controller->>View: show_history(history)
+            View->>User: 게임 기록 출력
+
+        else 선택 = 7 (종료)
+            Controller->>Controller: 루프 break
+        end
+    end
+
+    Controller->>View: show_message(종료메시지)
+    View->>User: 👋 안전하게 종료합니다.
+    Main->>Main: 프로그램 종료
+
+    note over Controller,FileSystem: KeyboardInterrupt(Ctrl+C) 발생 시<br/>예외 처리 후 안전하게 종료
+```
 
 * **Git:** README 작성 후 최종 푸시한다.
 
