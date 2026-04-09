@@ -158,3 +158,19 @@ class QuizModel:
             self._save_data()
             return True
         return False
+
+    def update_best_score(self, score):
+        """최고 점수 업데이트
+        
+        Args:
+            score (int): 현재 게임 점수
+            
+        Returns:
+            bool: 최고 점수 갱신 여부
+        """
+        # 새로운 점수가 기존 최고 점수보다 높으면 업데이트
+        if score > self.best_score:
+            self.best_score = score
+            self._save_data()
+            return True
+        return False
