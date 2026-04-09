@@ -52,6 +52,7 @@ E1_2/
 # 파일 구조
 # 데이터 파일 설명(`state.json` 경로/역할/스키마)
 
+### Class Diagram
 ```mermaid
 classDiagram
 
@@ -103,6 +104,38 @@ classDiagram
     QuizModel --> Quiz : manages
     QuizView --> Quiz : displays
 
+```
+
+### Sequence Diagram
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 사용자
+    participant C as Controller (main.py)
+    participant M as Model (quizGame.py)
+    participant V as View (quizView.py)
+    participant Q as Quiz Object (quiz.py)
+
+    User->>V: 1번 '퀴즈 풀기' 선택
+    V->>C: 선택 번호 전달
+    C->>M: 퀴즈 목록 데이터 요청
+    M-->>C: 퀴즈 리스트 반환
+    C->>V: 문제 수 선택 요청 (보너스 기능)
+    V-->>C: 선택된 문제 수 반환
+
+    loop 문제 수만큼 반복
+        C->>V: 문제 및 4개 선택지 출력
+        User->>V: 정답 입력 (1~4)
+        V-->>C: 검증된 정답 반환 (get_valid_number)
+        C->>Q: 정답 확인 요청 (is_correct)
+        Q-->>C: 정답 여부(True/False) 반환
+        C->>V: 정답/오답 결과 메시지 출력
+    end
+
+    C->>M: 게임 기록 추가 (add_history)
+    C->>M: 최고 점수 갱신 확인 (update_best_score)
+    M->>M: state.json에 데이터 저장 (_save_data)
+    C->>V: 최종 점수 및 결과 화면 출력
 ```
 
 * **Git:** README 작성 후 최종 푸시한다.
