@@ -39,7 +39,7 @@ class QuizView:
         """
         print(msg)
 
-   def get_valid_number(self, prompt, min_val, max_val):
+    def get_valid_number(self, prompt, min_val, max_val):
         """사용자로부터 유효한 숫자를 입력받음 (미션 요구 예외 처리 포함)
         
         처리:
@@ -73,3 +73,17 @@ class QuizView:
                 # 숫자가 아닌 입력 처리
             except ValueError:
                 print("⚠ 숫자를 입력해주세요.")
+
+    def get_new_quiz_input(self):
+        """새로운 퀴즈 정보를 입력받음
+        
+        Returns:
+            tuple: (문제, [선택지1~4], 정답번호)
+        """
+        print("\n[새 퀴즈 추가]")
+        q = input("문제: ").strip()
+        # 4개의 선택지 입력
+        c = [input(f"보기{i}: ").strip() for i in range(1, 5)]
+        # 정답 번호 입력 (1~4 범위 검증)
+        a = self.get_valid_number("정답(1-4): ", 1, 4)
+        return q, c, a
