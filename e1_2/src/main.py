@@ -80,3 +80,43 @@ class QuizController:
         # 최고 점수 업데이트 및 사용자 피드백
         if self.model.update_best_score(score):
             self.view.show_message("🎉 최고 점수 경신!")
+    def run(self):
+        """게임 메인 루프 실행
+        
+        메뉴를 표시하고 사용자 선택에 따라 기능 실행
+        Ctrl+C(KeyboardInterrupt) 또는 EOF 발생 시 안전하게 종료
+        """
+        try:
+            while True:
+                # 메뉴 표시 및 사용자 선택 입력
+                self.view.display_menu()
+                choice = self.view.get_valid_number("선택: ", 1, 7)
+                # 사용자 선택에 따른 기능 실행
+                if choice == 1:
+                    # 1. 퀴즈 풀기
+                    self.play_quiz()
+                elif choice == 2:
+                    # 2. 새로운 퀴즈 추가
+                    q_data = self.view.get_new_quiz_input()
+                    self.model.add_quiz(Quiz(*q_data))
+                elif choice == 3:
+                    # 3. 퀴즈 목록 보기
+                    self.view.show_quiz_list(self.model.quizzes)
+                elif choice == 4:
+                    # 4. 최고 점수 확인
+                    self.view.show_message(f"🔥 최고 점수: {self.model.best_score}점")
+                elif choice == 5:
+                    # 5. 퀴즈 삭제 (보너스)
+                    self.view.show_quiz_list(self.model.quizzes)
+                    idx = self.view.get_valid_number("삭제할 번호: ", 1, len(self.model.quizzes))
+                    self.model.delete_quiz(idx-1)
+                elif choice == 6:
+                    # 6. 게임 기록 보기 (보너스)
+                    self.view.show_history(self.model.history)
+                elif choice == 7:
+                    # 7. 게임 종료
+                    break
+        except (KeyboardInterrupt, EOFError):
+            # Ctrl+C 또는 입력 스트림 종료 시 안전 처리
+            # 진행 중인 상태가 자동으로 저장됨 (model._save_data() 호출됨)
+            self.view.show_message("\n\n👋 안전하게 종료합니다.")
