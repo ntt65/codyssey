@@ -97,3 +97,29 @@ class QuizModel:
         except (json.JSONDecodeError, ValueError, KeyError, TypeError):
             self._reset_to_default()
             self._save_data()
+
+    def _save_data(self):
+        """현재 상태를 state.json에 저장
+        
+        저장 형식:
+        {
+            "quizzes": [...],
+            "best_score": int,
+            "history": [...]
+        }
+        
+        인코딩: UTF-8, ensure_ascii=False (한글 저장 가능)
+        """
+        try:
+            # 저장할 데이터 구성
+            data = {
+                "quizzes": [q.to_dict() for q in self.quizzes],
+                "best_score": self.best_score,
+                "history": self.history  # 히스토리 저장
+            }
+            # JSON 파일 작성
+            with open(self.DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except IOError:
+            # 저장 실패 시 먹음 처리 (프로그램 중단 없음)
+            pass
