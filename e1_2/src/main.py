@@ -120,3 +120,7 @@ class QuizController:
             # Ctrl+C 또는 입력 스트림 종료 시 안전 처리
             # 진행 중인 상태가 자동으로 저장됨 (model._save_data() 호출됨)
             self.view.show_message("\n\n👋 안전하게 종료합니다.")
+
+if __name__ == "__main__":
+    # 프로그램 진입점
+    QuizController().run()
