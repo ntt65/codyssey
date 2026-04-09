@@ -142,3 +142,19 @@ class QuizModel:
         """
         self.quizzes.append(new_quiz)
         self._save_data()
+
+    def delete_quiz(self, index):
+        """퀴즈 삭제 (보너스 기능)
+        
+        Args:
+            index (int): 삭제할 퀴즈 인덱스 (0부터 시작)
+            
+        Returns:
+            bool: 삭제 성공 여부
+        """
+        # 인덱스 범위 검증
+        if 0 <= index < len(self.quizzes):
+            del self.quizzes[index]
+            self._save_data()
+            return True
+        return False
