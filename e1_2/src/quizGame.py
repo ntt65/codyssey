@@ -133,3 +133,12 @@ class QuizModel:
         self.quizzes = [Quiz(q.question, q.choices[:], q.answer) for q in DEFAULT_QUIZZES]
         self.best_score = 0
         self.history = []
+
+    def add_quiz(self, new_quiz):
+        """새로운 퀴즈 추가 및 저장
+        
+        Args:
+            new_quiz (Quiz): 추가할 Quiz 객체
+        """
+        self.quizzes.append(new_quiz)
+        self._save_data()
