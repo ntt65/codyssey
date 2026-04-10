@@ -535,4 +535,4 @@ sequenceDiagram
 * `docs/screenshots/menu.png`
 * `docs/screenshots/play.png`
 * `docs/screenshots/add_quiz.png`
-* `docs/screenshots/score.png`
+* `docs/screenshots/score.png`append one line at codyclone local repository
