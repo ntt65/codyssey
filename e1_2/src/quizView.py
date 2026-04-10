@@ -100,3 +100,18 @@ class QuizView:
         # 번호와 함께 퀴즈 문제 출력
         for i, q in enumerate(quizzes, 1):
             print(f"{i}. {q.question}")
+
+    def show_history(self, history):
+        """게임 기록 히스토리 표시 (보너스 기능)
+        
+        Args:
+            history (list): 게임 기록 딕셔너리 리스트
+        """
+        if not history:
+            print("⚠ 기록이 없습니다.")
+            return
+        print("\n[게임 기록 히스토리]")
+        # 각 게임 기록 표시: 날짜 | 점수 (정답/총문제)
+        for h in history:
+            print(f"- {h['date']} | 점수: {h['score']}점 ({h['correct']}/{h['total']})")
+    
