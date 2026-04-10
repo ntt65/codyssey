@@ -1,24 +1,30 @@
 
-# 프로젝트 개요
-## 프로젝트 소개
-**Python과 Git을 함께 배우는 첫 발자국** - 터미널에서 동작하는 인터랙티브한 퀴즈 게임을 Python으로 구현한 프로젝트입니다.
+동작하는 퀴즈 게임
+프로그램 실행 시 메뉴에서 번호를 선택하면, 선택 결과에 따라 퀴즈 출제/등록/목록/점수 확인/종료 화면이 출력된다.
+퀴즈 풀기, 퀴즈 추가, 퀴즈 목록, 점수 확인 기능이 동작한다.
+본인이 선택한 주제의 퀴즈가 5개 이상 포함되어 있다.
+프로그램을 종료하고 다시 실행해도 추가한 퀴즈와 최고 점수가 유지된다. (파일 저장)
+코드 구조
+최소 2개 이상의 클래스가 정의되어 있다. (예: Quiz, QuizGame)
+기능별로 메서드가 분리되어 있다. (입력 처리/게임 진행/저장 로직 등)
+데이터는 프로젝트 루트의 state.json에 UTF-8 인코딩으로 저장하고 불러온다.
+GitHub 저장소
+프로젝트 코드가 GitHub에 업로드되어 있다.
+최소 10개 이상의 의미 있는 커밋이 존재한다.
+최소 1회 이상의 브랜치 생성 및 병합(checkout, merge) 기록이 있다.
+clone과 pull을 각각 1회 이상 사용한 기록이 있다.
+README.md에 아래 항목이 포함되어 있다.
+프로젝트 개요
+퀴즈 주제 선정 이유
+실행 방법
+기능 목록
+파일 구조
+데이터 파일 설명(state.json 등)
 
-### 주요 목표
-#### Python 기초 문법 학습 및 실전 활용
-* MVC(Model-View-Controller) 디자인 패턴 이해 
-
-        MVC(Model-View-Controller) 패턴은 프로그램을 세 가지 역할로 나누어 관리하는 설계 방식입니다
-    - Model (모델): 데이터와 저장을 담당합니다. quizGame.py와 quiz.py가 퀴즈 데이터를 관리하고 state.json에 저장하는 역할을 합니다
-    - View (뷰): 사용자 인터페이스를 담당합니다. quizView.py가 메뉴를 화면에 출력하고 사용자의 입력을 받는 역할을 수행합니다
-    - Controller (컨트롤러): 전체 흐름을 제어하며 모델과 뷰를 연결합니다. main.py가 사용자의 선택에 따라 필요한 기능을 실행하도록 명령하는 사령탑 역할을 합니다
-
-- JSON 파일을 이용한 데이터 영속성 구현
-- Git을 사용한 버전 관리 및 협업 기초 습득
-
----
-
-## 기술 스택
-
+# Git과 함께하는 Python 첫 발자국
+## 프로젝트 개요
+- 터미널에서 동작하는 인터랙티브한 퀴즈 게임을 Python으로 구현한 프로젝트입니다.
+### 기술 스택
 | 항목 | 내용 |
 |------|------|
 | **언어** | Python 3.10+ |
@@ -26,11 +32,18 @@
 | **데이터 저장** | JSON (UTF-8 인코딩) |
 | **외부 라이브러리** | 없음 (표준 라이브러리만 사용) |
 | **주요 모듈** | `json`, `os`, `random`, `datetime` |
-
----
-
+## 퀴즈 주제와 선정 이유
+- Python, 현재 python학습중이라 친숙해지기 위해
+## 실행 방법
+- 터미널이나 CMD 창에서 **python main.py**를 입력하여 실행
+# 기능 목록
+- 퀴즈 풀기: 저장된 문제를 풀고 정답 여부를 확인하며, 최종 점수를 계산합니다.
+- 퀴즈 추가: 새로운 문제와 4개의 선택지, 정답 번호를 입력받아 시스템에 등록합니다.
+- 퀴즈 목록 조회: 현재 등록된 모든 퀴즈의 질문 리스트를 확인합니다.
+- 최고 점수 관리: 역대 최고 점수를 기록하고, 퀴즈를 풀 때마다 갱신 여부를 확인합니다.
+- 데이터 영속성 유지: 모든 데이터는 state.json에 저장되어 프로그램 재시작 후에도 유지됩니다.
+# 파일 구조
 ## 프로젝트 구조
-
 ```
 E1_2/
 ├── src/
@@ -46,30 +59,77 @@ E1_2/
 └── state.json            # 데이터 저장 파일 (자동 생성)
 ```
 
-# 퀴즈 주제와 선정 이유
-# 실행 방법
-# 기능 목록
-# 파일 구조
-# 데이터 파일 설명(`state.json` 경로/역할/스키마)
+### Class Diagram
+```mermaid
+classDiagram
 
 
+    class Quiz {
+        -question: str
+        -choices: list
+        -answer: int
+        +__init__(question, choices, answer)
+        +is_correct(user_answer): bool
+        +to_dict(): dict
+        +from_dict(data): Quiz
+    }
 
-* **Git:** README 작성 후 최종 푸시한다.
+    class QuizModel {
+        -quizzes: list
+        -best_score: int
+        -history: list
+        -DATA_FILE: str
+        +__init__()
+        +_load_data()
+        +_save_data()
+        +_reset_to_default()
+        +add_quiz(new_quiz)
+        +delete_quiz(index): bool
+        +update_best_score(score): bool
+        +add_history(record)
+    }
+
+    class QuizView {
+        +display_menu()
+        +show_message(msg)
+        +get_valid_number(prompt, min_val, max_val): int
+        +get_new_quiz_input(): tuple
+        +show_quiz_list(quizzes)
+        +show_history(history)
+    }
+
+    class QuizController {
+        -model: QuizModel
+        -view: QuizView
+        +__init__()
+        +play_quiz()
+        +run()
+    }
+
+    QuizController --> QuizModel : uses
+    QuizController --> QuizView : uses
+    QuizModel --> Quiz : manages
+    QuizView --> Quiz : displays
+
+```
+# 데이터 파일 설명(state.json 경로/역할/스키마)
+경로: 프로젝트 루트 디렉토리 (./state.json)
+역할: 프로그램 종료 후에도 추가된 퀴즈와 최고 점수가 유지되도록 데이터를 저장하는 데이터 영속성을 담당합니다
+. 파일이 없거나 손상된 경우 기본 데이터로 자동 복구하는 기능도 포함합니다
+```
+state.json (데이터 구조)
+├── 📂 quizzes (List: 퀴즈 목록)
+│   └── 📄 Quiz Object
+│       ├── ❓ question (String: 문제 내용)
+│       ├── 📜 choices (List: 4개의 선택지)
+│       └── ✅ answer (Integer: 정답 번호 1~4)
+├── 🏆 best_score (Integer: 최고 점수)
+└── 🕒 history (List: 게임 기록 히스토리)
+``` 
+
+# Git: README 작성 후 최종 푸시한다.
 
 ### ⚙️ Git 저장소 복제 실습
-1. 폴더명 변경 및 Push
-Git은 대소문자 변화를 자동으로 감지하지 못할 때가 많으므로 git mv 명령어를 사용하는 것이 가장 안전합니다.
-# 폴더가 있는 위치로 이동 후 실행
-git mv E1_1 e1_1
-git mv E2_2 e2_2
-git commit -m "Refactor: 폴더명을 소문자로 변경하여 편의성 개선"
-git push origin main
-2. 삭제 후 다시 Clone
-이제 현재 로컬 폴더를 완전히 삭제하고 원격 저장소(GitHub)에 있는 최신 상태를 다시 가져옵니다
-.
-cd ..  # 프로젝트 폴더 밖으로 이동
-rm -rf [현재_프로젝트_폴더명]  # 로컬 폴더 삭제
-git clone [사용자님의_GitHub_저장소_URL]
 
 * 이 단계는 `clone`과 `pull` 명령어를 자연스럽게 경험하기 위한 실습이다. 퀴즈 게임 개발이 완료된 후 아래 절차를 순서대로 수행한다.
 * 미션 수행 저장소를 `clone`하여 별도의 로컬 디렉터리에 복제한다.
@@ -194,59 +254,7 @@ mpeg46551@c5r1s2 src % cat state.json
 ### 📌 코드 구조
 * 모든 코드를 한 함수에 작성하지 않고, 기능별로 함수를 분리해야 한다.
 * 최소 2개 이상의 클래스로 역할을 분리해야 한다.
-### Class Diagram
-```mermaid
-classDiagram
 
-
-    class Quiz {
-        -question: str
-        -choices: list
-        -answer: int
-        +__init__(question, choices, answer)
-        +is_correct(user_answer): bool
-        +to_dict(): dict
-        +from_dict(data): Quiz
-    }
-
-    class QuizModel {
-        -quizzes: list
-        -best_score: int
-        -history: list
-        -DATA_FILE: str
-        +__init__()
-        +_load_data()
-        +_save_data()
-        +_reset_to_default()
-        +add_quiz(new_quiz)
-        +delete_quiz(index): bool
-        +update_best_score(score): bool
-        +add_history(record)
-    }
-
-    class QuizView {
-        +display_menu()
-        +show_message(msg)
-        +get_valid_number(prompt, min_val, max_val): int
-        +get_new_quiz_input(): tuple
-        +show_quiz_list(quizzes)
-        +show_history(history)
-    }
-
-    class QuizController {
-        -model: QuizModel
-        -view: QuizView
-        +__init__()
-        +play_quiz()
-        +run()
-    }
-
-    QuizController --> QuizModel : uses
-    QuizController --> QuizView : uses
-    QuizModel --> Quiz : manages
-    QuizView --> Quiz : displays
-
-```
 
 ### Sequence Diagram
 ```mermaid
