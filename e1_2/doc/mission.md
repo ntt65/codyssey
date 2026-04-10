@@ -268,7 +268,60 @@ mpeg46551@c5r1s2 e1_2 % git log --oneline --graph --all
 * 207453a Docs:Create main.py
 ```
 * `clone`과 `pull`을 각각 1회 이상 사용한 기록이 있다.
-
+```p
+mpeg46551@c5r1s2 codyssey % cd ..
+mpeg46551@c5r1s2 ~ % cd ..
+mpeg46551@c5r1s2 /Users % git clone https://github.com/ntt65/codyssey codyclone
+fatal: could not create work tree dir 'codyclone': Permission denied
+mpeg46551@c5r1s2 /Users % cd ~
+mpeg46551@c5r1s2 ~ % git clone https://github.com/ntt65/codyssey codyclone
+Cloning into 'codyclone'...
+remote: Enumerating objects: 372, done.
+remote: Counting objects: 100% (372/372), done.
+remote: Compressing objects: 100% (176/176), done.
+remote: Total 372 (delta 190), reused 351 (delta 169), pack-reused 0 (from 0)
+Receiving objects: 100% (372/372), 491.43 KiB | 4.13 MiB/s, done.
+Resolving deltas: 100% (190/190), done.
+mpeg46551@c5r1s2 ~ % cd codyclone
+mpeg46551@c5r1s2 codyclone % ls
+body.md         e1_1            e1_2            README.md
+mpeg46551@c5r1s2 codyclone % cd e1_2
+mpeg46551@c5r1s2 e1_2 % ls
+doc             exam            pic             readme.md       src
+mpeg46551@c5r1s2 e1_2 % echo "append one line at codyclone local repository" >> readme.md
+mpeg46551@c5r1s2 e1_2 % git add readme.md
+mpeg46551@c5r1s2 e1_2 % git commit -m "Fix:readme.md oneline at cloned local repository"
+[main 92d7d85] Fix:readme.md oneline at cloned local repository
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ mpeg46551@c5r1s2 codyclone % git config user.name "ntt65"
+mpeg46551@c5r1s2 codyclone % git config user.email "ntt6551@gmail.com"
+mpeg46551@c5r1s2 codyclone % git remote set-url origin https://ntt65@github.com/ntt65/codyssey.git
+mpeg46551@c5r1s2 codyclone % git push
+Enumerating objects: 7, done.
+Counting objects: 100% (7/7), done.
+Delta compression using up to 6 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 407 bytes | 407.00 KiB/s, done.
+Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+To https://github.com/ntt65/codyssey.git
+   bf5a565..92d7d85  main -> main
+mpeg46551@c5r1s2 codyclone % cd ..
+mpeg46551@c5r1s2 ~ % cd codyssey 
+mpeg46551@c5r1s2 codyssey % git pull
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 4 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 387 bytes | 129.00 KiB/s, done.
+From https://github.com/ntt65/codyssey
+   bf5a565..92d7d85  main       -> origin/main
+Updating bf5a565..92d7d85
+Fast-forward
+ e1_2/readme.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+mpeg46551@c5r1s2 codyssey % 
+```
 * **README.md**에 아래 항목이 포함되어 있다.
     * 프로젝트 개요
     * 퀴즈 주제 선정 이유
