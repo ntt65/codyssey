@@ -87,3 +87,16 @@ class QuizView:
         # 정답 번호 입력 (1~4 범위 검증)
         a = self.get_valid_number("정답(1-4): ", 1, 4)
         return q, c, a
+    
+    def show_quiz_list(self, quizzes):
+        """등록된 퀴즈 목록 표시
+        
+        Args:
+            quizzes (list): Quiz 객체 리스트
+        """
+        if not quizzes:
+            print("⚠ 등록된 퀴즈가 없습니다.")
+            return
+        # 번호와 함께 퀴즈 문제 출력
+        for i, q in enumerate(quizzes, 1):
+            print(f"{i}. {q.question}")
