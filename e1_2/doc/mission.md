@@ -14,12 +14,218 @@ Python과 Git은 **"내가 만든 프로그램이 왜 이렇게 동작하는지"
 
 ### ✅ 동작하는 퀴즈 게임
 * 프로그램 실행 시 메뉴에서 번호를 선택하면, 선택 결과에 따라 퀴즈 출제/등록/목록/점수 확인/종료 화면이 출력된다.
+```
+mpeg46551@c5r1s2 e1_2 % python src/main.py
+```p
+=============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 2
+
+[새 퀴즈 추가]
+문제: python의 변수 타입이 아닌것은?
+보기1: ㅑint
+보기2: float
+보기3: str
+보기4: print
+정답(1-4): 4
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 3
+1. 파이썬에서 함수를 정의할 때 사용하는 키워드는 무엇인가요
+2. 다음 중 파이썬의 기본 데이터 타입이 아닌 것은 무엇인가요
+3. 화면에 값을 출력하기 위해 사용하는 함수는 무엇인가요
+4. 리스트의 맨 끝에 새로운 요소를 추가하는 메서드는 무엇인가요
+5. 조건에 따라 코드를 실행할지 결정하는 키워드는 무엇인가요
+6. python의 변수 타입이 아닌것은?
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 4
+
+🔥 최고 점수: 0점
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 5
+
+1. 파이썬에서 함수를 정의할 때 사용하는 키워드는 무엇인가요
+2. 다음 중 파이썬의 기본 데이터 타입이 아닌 것은 무엇인가요
+3. 화면에 값을 출력하기 위해 사용하는 함수는 무엇인가요
+4. 리스트의 맨 끝에 새로운 요소를 추가하는 메서드는 무엇인가요
+5. 조건에 따라 코드를 실행할지 결정하는 키워드는 무엇인가요
+6. python의 변수 타입이 아닌것은?
+삭제할 번호: 
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 6
+
+[게임 기록 히스토리]
+- 2026-04-10 21:08 | 점수: 0점 (0/1)
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 7
+```
 * 퀴즈 풀기, 퀴즈 추가, 퀴즈 목록, 점수 확인 기능이 동작한다.
+
 * 본인이 선택한 주제의 퀴즈가 5개 이상 포함되어 있다.
 * 프로그램을 종료하고 다시 실행해도 추가한 퀴즈와 최고 점수가 유지된다. (파일 저장)
+```p
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 4
+🔥 최고 점수: 100점
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 7
+mpeg46551@c5r1s2 e1_2 % python src/main.py
+
+==============================
+   파이썬 퀴즈 챌린지
+==============================
+1. 퀴즈 풀기 (랜덤/수량)
+2. 새로운 퀴즈 추가
+3. 퀴즈 목록 보기
+4. 최고 점수 확인
+5. 퀴즈 삭제하기 (보너스)
+6. 전체 기록 보기 (보너스)
+7. 게임 종료
+==============================
+선택: 4
+🔥 최고 점수: 100점
+stte.json
+  "best_score": 100,
+```
 
 ### ✅ 코드 구조
 * 최소 2개 이상의 클래스가 정의되어 있다. (예: `Quiz`, `QuizGame`)
+### Class Diagram
+```mermaid
+classDiagram
+
+
+    class Quiz {
+        -question: str
+        -choices: list
+        -answer: int
+        +__init__(question, choices, answer)
+        +is_correct(user_answer): bool
+        +to_dict(): dict
+        +from_dict(data): Quiz
+    }
+
+    class QuizModel {
+        -quizzes: list
+        -best_score: int
+        -history: list
+        -DATA_FILE: str
+        +__init__()
+        +_load_data()
+        +_save_data()
+        +_reset_to_default()
+        +add_quiz(new_quiz)
+        +delete_quiz(index): bool
+        +update_best_score(score): bool
+        +add_history(record)
+    }
+
+    class QuizView {
+        +display_menu()
+        +show_message(msg)
+        +get_valid_number(prompt, min_val, max_val): int
+        +get_new_quiz_input(): tuple
+        +show_quiz_list(quizzes)
+        +show_history(history)
+    }
+
+    class QuizController {
+        -model: QuizModel
+        -view: QuizView
+        +__init__()
+        +play_quiz()
+        +run()
+    }
+
+    QuizController --> QuizModel : uses
+    QuizController --> QuizView : uses
+    QuizModel --> Quiz : manages
+    QuizView --> Quiz : displays
+
+```
 * 기능별로 메서드가 분리되어 있다. (입력 처리/게임 진행/저장 로직 등)
 * 데이터는 프로젝트 루트의 `state.json`에 UTF-8 인코딩으로 저장하고 불러온다.
 
@@ -27,7 +233,42 @@ Python과 Git은 **"내가 만든 프로그램이 왜 이렇게 동작하는지"
 * 프로젝트 코드가 GitHub에 업로드되어 있다.
 * 최소 10개 이상의 의미 있는 커밋이 존재한다.
 * 최소 1회 이상의 브랜치 생성 및 병합(`checkout`, `merge`) 기록이 있다.
+```p
+mpeg46551@c5r1s2 e1_2 % git log --oneline --graph --all
+* ea61cd1 (HEAD -> main, origin/main, origin/HEAD) Docs: Finalize README.md and complete mission
+*   92b823b Merge: branch 'play_quiz'
+|\  
+| * 1084319 (play_quiz) Feat:quizView.py:QuizView:show_history()
+| * af2e7e5 Feat:quizView.py:QuizView:show_quiz_list()
+| * 61ea2d9 (origin/play_quiz) Docs:quizView.py:QuizView:get_new_quiz_input()
+| * 293c84b Docs:quizView.py:QuizView:get_valid_number()
+| * 28ad0d7 Docs:quizView.py:QuizView:show_message()
+| * 90853f9 Docs:quizView.py:QuizView:display_menu()
+| * 4312f61 Docs:quizView.py:Create QuizView
+| * 1220796 Feat:quizGame.py:QuizMode:add_history()
+| * 59ee5d3 Feat:quizGame.py:QuizMode:update_best_score()
+| * 607e815 Feat:quizGame.py:QuizMode:delete_quiz()
+| * 773ee16 Feat:quizGame.py:QuizMode:add_quiz()
+| * 72007b2 Feat:quizGame.py:QuizMode:_reset_to_default()
+| * 22a3d5c Feat:quizGame.py:QuizMode:_save_data()
+| * 852b73a Feat:quizGame.py:QuizMode:_load_data()
+| * a471e57 Feat:quizGame.py:Create class quizModel
+| * f84cb23 Docs:Create quizGame.py
+| * d6baef0 Feat:quiz.py:Quiz:from_dict()
+| * a26cded Feat: quiz.py:Quiz:to_dict()
+| * 459d526 Feat: quiz.py:Quiz:is_correct()
+* | f8dfbc8 Move:exam
+* | bdac78a Docs:Create exam.py
+|/  
+* c1eea5d Docs:Create quiz.py:Quiz
+* 30ca24f Feat: main.py:QuizController().run()
+* 1b1558c Feat: main.py:QuizController:run()
+* bce2c2c Feat: main.py:play_quiz(self)
+* c191a7a move git_log.png
+* 207453a Docs:Create main.py
+```
 * `clone`과 `pull`을 각각 1회 이상 사용한 기록이 있다.
+
 * **README.md**에 아래 항목이 포함되어 있다.
     * 프로젝트 개요
     * 퀴즈 주제 선정 이유
