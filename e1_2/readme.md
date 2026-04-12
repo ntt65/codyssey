@@ -10,10 +10,7 @@
 사용자는 메뉴를 통해 퀴즈 풀기, 추가, 목록 조회, 최고 점수 확인 등의 기능을 이용할 수 있습니다. 
 
 # 퀴즈선정이유
-현재 기본 퀴즈가 파이썬 문법 관련 내용이므로, **'파이썬 프로그래밍 입문자가 반드시 숙지해야 할 기초 문법과 핵심 개념을 복습하기 위해 선정했습니다'**라고 한 줄 추가하시면 적절합니다.
-
-# 기능목록 파일구조
-README에 바로 활용하실 수 있도록 **기능 목록**과 **파일 구조**를 정리해 드립니다.
+ **'파이썬 프로그래밍 입문자가 반드시 숙지해야 할 기초 문법과 핵심 개념을 복습하기 위해 선정했습니다'**
 
 ### 📝 기능 목록
 *   **메뉴 시스템**: 퀴즈 풀기, 추가, 목록 보기 등 7가지 기능을 선택할 수 있는 메인 인터페이스를 제공합니다.
@@ -301,58 +298,72 @@ mpeg46551@c5r1s2 e1_2 % python src/main.py
 ![git log](pic/git_log.png)
 
 # 평가기준 7 : clone과 pull 실습 수행 흔적 확인
-```bash
-```p
+## clone
+```bash 
 mpeg46551@c5r1s2 /Users % cd ~
 mpeg46551@c5r1s2 ~ % git clone https://github.com/ntt65/codyssey codyclone
-Cloning into 'codyclone'...
-remote: Enumerating objects: 372, done.
-remote: Counting objects: 100% (372/372), done.
-remote: Compressing objects: 100% (176/176), done.
-remote: Total 372 (delta 190), reused 351 (delta 169), pack-reused 0 (from 0)
-Receiving objects: 100% (372/372), 491.43 KiB | 4.13 MiB/s, done.
-Resolving deltas: 100% (190/190), done.
+  Cloning into 'codyclone'...
+  remote: Enumerating objects: 372, done.
+  remote: Counting objects: 100% (372/372), done.
+  remote: Compressing objects: 100% (176/176), done.
+  remote: Total 372 (delta 190), reused 351 (delta 169), pack-reused 0 (from 0)
+  Receiving objects: 100% (372/372), 491.43 KiB | 4.13 MiB/s, done.
+  Resolving deltas: 100% (190/190), done.
+```
+## 클론한 로컬리포지토리로 이동
+```bash
 mpeg46551@c5r1s2 ~ % cd codyclone
 mpeg46551@c5r1s2 codyclone % ls
-body.md         e1_1            e1_2            README.md
-mpeg46551@c5r1s2 codyclone % cd e1_2
-mpeg46551@c5r1s2 e1_2 % ls
-doc             exam            pic             readme.md       src
+  body.md         e1_1            e1_2            README.md
+  mpeg46551@c5r1s2 codyclone % cd e1_2
+  mpeg46551@c5r1s2 e1_2 % ls
+  doc             exam            pic             readme.md       src
+  ```
+  ## readme.md 변경
+  ```bash
 mpeg46551@c5r1s2 e1_2 % echo "append one line at codyclone local repository" >> readme.md
+```
+## add and commit
+```bash
 mpeg46551@c5r1s2 e1_2 % git add readme.md
 mpeg46551@c5r1s2 e1_2 % git commit -m "Fix:readme.md oneline at cloned local repository"
-[main 92d7d85] Fix:readme.md oneline at cloned local repository
- 1 file changed, 1 insertion(+), 1 deletion(-)
- mpeg46551@c5r1s2 codyclone % git config user.name "ntt65"
-mpeg46551@c5r1s2 codyclone % git config user.email "ntt6551@gmail.com"
-mpeg46551@c5r1s2 codyclone % git remote set-url origin https://ntt65@github.com/ntt65/codyssey.git
-
+  [main 92d7d85] Fix:readme.md oneline at cloned local repository
+  1 file changed, 1 insertion(+), 1 deletion(-)
+  mpeg46551@c5r1s2 codyclone % git config user.name "ntt65"
+  mpeg46551@c5r1s2 codyclone % git config user.email "ntt6551@gmail.com"
+  mpeg46551@c5r1s2 codyclone % git remote set-url origin https://ntt65@github.com/ntt65/codyssey.git
+```
+## push
+```bash
 mpeg46551@c5r1s2 codyclone % git push
-Enumerating objects: 7, done.
-Counting objects: 100% (7/7), done.
-Delta compression using up to 6 threads
-Compressing objects: 100% (4/4), done.
-Writing objects: 100% (4/4), 407 bytes | 407.00 KiB/s, done.
-Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
-To https://github.com/ntt65/codyssey.git
-   bf5a565..92d7d85  main -> main
-
+  Enumerating objects: 7, done.
+  Counting objects: 100% (7/7), done.
+  Delta compression using up to 6 threads
+  Compressing objects: 100% (4/4), done.
+  Writing objects: 100% (4/4), 407 bytes | 407.00 KiB/s, done.
+  Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+  remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+  To https://github.com/ntt65/codyssey.git
+    bf5a565..92d7d85  main -> main
+```
+## 다시 원래 폴더로 이동후 git pull
+```bash
 mpeg46551@c5r1s2 ~ % cd codyssey 
 mpeg46551@c5r1s2 codyssey % git pull
-remote: Enumerating objects: 7, done.
-remote: Counting objects: 100% (7/7), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 4 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (4/4), 387 bytes | 129.00 KiB/s, done.
-From https://github.com/ntt65/codyssey
-   bf5a565..92d7d85  main       -> origin/main
-Updating bf5a565..92d7d85
-Fast-forward
- e1_2/readme.md | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+  remote: Enumerating objects: 7, done.
+  remote: Counting objects: 100% (7/7), done.
+  remote: Compressing objects: 100% (1/1), done.
+  remote: Total 4 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
+  Unpacking objects: 100% (4/4), 387 bytes | 129.00 KiB/s, done.
+  From https://github.com/ntt65/codyssey
+    bf5a565..92d7d85  main       -> origin/main
+  Updating bf5a565..92d7d85
+  Fast-forward
+  e1_2/readme.md | 2 +-
+  1 file changed, 1 insertion(+), 1 deletion(-)
 mpeg46551@c5r1s2 codyssey % 
 ```
+![git_clone_result](pic/git_clone_push.png)
 
 # 평가기준 8 : 클래스들의 책임 분리 설명
 ## 프로젝트 구조
