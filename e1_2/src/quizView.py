@@ -38,6 +38,10 @@ class QuizView:
             msg (str): 출력할 메시지
         """
         print(msg)
+        
+    def wait_for_enter(self):
+        """사용자가 Enter 키를 누를 때까지 대기"""
+        input("\n계속하려면 Enter를 누르세요...")
 
     def get_valid_number(self, prompt, min_val, max_val):
         """사용자로부터 유효한 숫자를 입력받음 (미션 요구 예외 처리 포함)
@@ -100,6 +104,7 @@ class QuizView:
         # 번호와 함께 퀴즈 문제 출력
         for i, q in enumerate(quizzes, 1):
             print(f"{i}. {q.question}")
+        self.wait_for_enter()
 
     def show_history(self, history):
         """게임 기록 히스토리 표시 (보너스 기능)
@@ -114,4 +119,5 @@ class QuizView:
         # 각 게임 기록 표시: 날짜 | 점수 (정답/총문제)
         for h in history:
             print(f"- {h['date']} | 점수: {h['score']}점 ({h['correct']}/{h['total']})")
+        self.wait_for_enter()
     
