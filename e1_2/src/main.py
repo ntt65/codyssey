@@ -62,11 +62,11 @@ class QuizController:
 
         # 게임 기록 저장 (보너스 기능)
         self.model.add_history({
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "score": score, "correct": correct, "total": count
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),   # 기록 날짜
+            "score": score, "correct": correct, "total": count   # 정답 수, 총 문제 수
         })
         # 최고 점수 업데이트 및 사용자 피드백
-        if self.model.update_best_score(score):
+        if self.model.update_best_score(score):       # 최고 점수 갱신 여부 확인
             self.view.show_message("🎉 최고 점수 경신!")
     def run(self):
         """게임 메인 루프 실행
@@ -112,7 +112,8 @@ class QuizController:
             # 진행 중인 상태가 자동으로 저장됨 (model._save_data() 호출됨)
             # Ctrl+C: 실행 중인 프로그램을 즉시 중단하라는 신호로, 파이썬에서는 KeyboardInterrupt 예외를 발생시킵니다
             # Ctrl+D (macOS/Linux) 또는 Ctrl+Z (Windows): 입력을 마친다는 '파일 끝' 신호로, 파이썬에서는 **EOFError**를 발생시킵니다.
-            self.view.show_message("\n\n👋 안전하게 종료합니다.")
+            self.model._save_data("state.bak")  # 데이터 저장 (예외 발생 시에도 저장 보장)
+            self.view.show_message("\n\n👋 state.bak 백업파일을 만들고 안전하게 종료합니다.")
 
 if __name__ == "__main__":
     # 프로그램 진입점
