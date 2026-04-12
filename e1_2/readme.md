@@ -255,47 +255,92 @@ mpeg46551@c5r1s2 src % cat state.json
 * 모든 코드를 한 함수에 작성하지 않고, 기능별로 함수를 분리해야 한다.
 * 최소 2개 이상의 클래스로 역할을 분리해야 한다.
 
-
-### Sequence Diagram
+### Menu Sequence Diagram
 ```mermaid
 sequenceDiagram
-    participant User as 사용자
-    participant Controller as QuizController
-    participant Model as QuizModel
-    participant View as QuizView
+    participant User
+    participant Main as main.py<br/>(Controller)
+    participant View as quizView.py<br/>(View)
+    participant Model as quizGame.py<br/>(Model)
+    participant Quiz as quiz.py<br/>(Quiz)
     participant File as state.json
 
-    User->>Controller: 프로그램 실행(run)
-    Controller->>Model: _load_data() 호출
-    Model->>File: state.json 읽기
-    File-->>Model: 퀴즈/점수/기록 데이터 반환
-    Model-->>Controller: 데이터 로드 완료
+    User->>Main: python main.py 실행
+    Main->>Model: __init__()
+    Model->>File: _load_data()
+    File-->>Model: JSON 데이터 로드
+    Model->>Quiz: from_dict() 변환
+    Quiz-->>Model: Quiz 객체 리스트
+    Model-->>Main: 초기화 완료
 
-    loop 메인 메뉴 반복
-        Controller->>View: display_menu()
+    loop 메인 루프
+        Main->>View: display_menu()
         View-->>User: 메뉴 표시
         User->>View: 선택 입력
-        View-->>Controller: 선택 결과
+        View->>View: get_valid_number() 검증
+        View-->>Main: 선택값 반환
 
-        alt 퀴즈 풀기
-            Controller->>Model: 퀴즈 목록 가져오기
-            Controller->>View: get_valid_number(문제 수)
-            Controller->>View: show_quiz(문제 표시)
-            View-->>User: 정답 입력 요청
-            User->>View: 정답 입력
-            View-->>Controller: 정답 결과 전달
-            Controller->>Model: add_history(), update_best_score()
-            Model->>File: state.json 저장
-        else 퀴즈 추가/삭제/조회
-            Controller->>View: 관련 메서드 호출
-            View->>User: 입력/출력 상호작용
-            Controller->>Model: add_quiz(), delete_quiz()
-            Model->>File: 데이터 업데이트
-        else 종료
-            Controller-->>View: show_message("종료 안내")
+        alt 선택 == 1: 퀴즈 풀기
+            Main->>View: get_valid_number(문제수)
+            View-->>Main: count 반환
+            Main->>Main: random.shuffle(quizzes)
+            Main->>Main: 선택된 수만큼 퀴즈 추출
+            loop 각 퀴즈마다
+                Main->>View: show_quiz(quiz)
+                View-->>User: 문제와 선택지 출력
+                User->>View: 정답 입력
+                View->>Quiz: is_correct(user_answer)
+                Quiz-->>View: 정답 여부 반환
+                View-->>User: ✅/❌ 피드백
+                View-->>Main: 정답 개수 반환
+            end
+            Main->>Main: 점수 계산 (정답률%)
+            Main->>Model: add_history(기록)
+            Model->>File: _save_data()
+            Main->>Model: update_best_score(score)
+            Model->>File: _save_data()
+            View-->>User: 점수 표시
+
+        else 선택 == 2: 새 퀴즈 추가
+            Main->>View: get_new_quiz_input()
+            View-->>User: 문제, 선택지, 정답 입력
+            User->>View: 퀴즈 정보 입력
+            View->>View: get_valid_number() 검증
+            View-->>Main: (문제, 선택지, 정답) 반환
+            Main->>Quiz: __init__() 생성
+            Main->>Model: add_quiz(quiz)
+            Model->>File: _save_data()
+
+        else 선택 == 3: 퀴즈 목록 보기
+            Main->>View: show_quiz_list(quizzes)
+            View-->>User: 퀴즈 목록 표시
+
+        else 선택 == 4: 최고 점수 확인
+            Main->>Model: best_score 조회
+            View-->>User: 최고 점수 출력
+
+        else 선택 == 5: 퀴즈 삭제
+            Main->>View: show_quiz_list(quizzes)
+            View-->>User: 퀴즈 목록 표시
+            User->>View: 삭제할 번호 입력
+            Main->>Model: delete_quiz(index)
+            Model->>File: _save_data()
+
+        else 선택 == 6: 게임 기록 보기
+            Main->>Model: history 조회
+            Main->>View: show_history(history)
+            View-->>User: 게임 기록 표시
+
+        else 선택 == 7: 게임 종료
+            Main->>Main: break
         end
     end
+
+    Main->>View: show_message(종료 메시지)
+    Model->>File: _save_data()
+    Main-->>User: 프로그램 종료
 ```
+
 ### 📌 Git 워크플로우
 * 최소 10개 이상의 의미 있는 커밋이 있어야 한다.
 ![git log](e1_2/pic/git_log.png)
