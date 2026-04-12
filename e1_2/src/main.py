@@ -39,7 +39,7 @@ class QuizController:
         4. 최고 점수 업데이트
         5. 기록 저장
         """
-        quizzes = self.model.quizzes[:]  # 복사본 사용 - 원본 리스트 보호
+        quizzes = self.model.quizzes[:]  # 복사본 사용 - 원본 리스트 보호,얕은복사,quiz 객체는 그대로 참조
         if not quizzes:
             self.view.show_message("⚠ 퀴즈가 없습니다.")
             return
@@ -48,25 +48,13 @@ class QuizController:
         count = self.view.get_valid_number(f"몇 문제를 푸시겠습니까? (1~{len(quizzes)}): ", 1, len(quizzes))
         
         # 퀴즈 순서 랜덤 섞기 (보너스 기능)
-        random.shuffle(quizzes)
-        quizzes = quizzes[:count]
+        random.shuffle(quizzes) # 퀴즈 리스트 섞기
+        quizzes = quizzes[:count] # 선택된 문제 수만큼 퀴즈 출제
 
         correct = 0
         # 각 퀴즈 출제 및 채점
         for i, q in enumerate(quizzes, 1):
-            self.view.show_message(f"\n[Q{i}] {q.question}")
-            # 4개 선택지 출력
-            for idx, choice in enumerate(q.choices, 1):
-                print(f"  {idx}. {choice}")
-
-            # 사용자 입력 받기 (1~4 범위 검증)
-            ans = self.view.get_valid_number("정답: ", 1, 4)
-            # 정답 확인 및 점수 누적
-            if q.is_correct(ans):
-                self.view.show_message("✅ 정답!")
-                correct += 1
-            else:
-                self.view.show_message(f"❌ 오답! 정답은 {q.answer}")
+            correct += self.view.show_quiz(q)  # 퀴즈 문제와 선택지 출력
 
         # 최종 점수 계산 (정답률 %)
         score = int(correct / count * 100)
@@ -102,9 +90,11 @@ class QuizController:
                 elif choice == 3:
                     # 3. 퀴즈 목록 보기
                     self.view.show_quiz_list(self.model.quizzes)
+                    self.view.wait_for_enter()
                 elif choice == 4:
                     # 4. 최고 점수 확인
                     self.view.show_message(f"🔥 최고 점수: {self.model.best_score}점")
+                    self.view.wait_for_enter()
                 elif choice == 5:
                     # 5. 퀴즈 삭제 (보너스)
                     self.view.show_quiz_list(self.model.quizzes)
@@ -113,12 +103,15 @@ class QuizController:
                 elif choice == 6:
                     # 6. 게임 기록 보기 (보너스)
                     self.view.show_history(self.model.history)
+                    self.view.wait_for_enter()
                 elif choice == 7:
                     # 7. 게임 종료
                     break
         except (KeyboardInterrupt, EOFError):
             # Ctrl+C 또는 입력 스트림 종료 시 안전 처리
             # 진행 중인 상태가 자동으로 저장됨 (model._save_data() 호출됨)
+            # Ctrl+C: 실행 중인 프로그램을 즉시 중단하라는 신호로, 파이썬에서는 KeyboardInterrupt 예외를 발생시킵니다
+            # Ctrl+D (macOS/Linux) 또는 Ctrl+Z (Windows): 입력을 마친다는 '파일 끝' 신호로, 파이썬에서는 **EOFError**를 발생시킵니다.
             self.view.show_message("\n\n👋 안전하게 종료합니다.")
 
 if __name__ == "__main__":
