@@ -62,18 +62,16 @@ E1_2/
 ### Class Diagram
 ```mermaid
 classDiagram
-
-
     class Quiz {
         -question: str
         -choices: list
         -answer: int
         +__init__(question, choices, answer)
-        +is_correct(user_answer): bool
-        +to_dict(): dict
-        +from_dict(data): Quiz
+        +is_correct(user_answer) bool
+        +to_dict() dict
+        +from_dict(data) Quiz
     }
-
+    
     class QuizModel {
         -quizzes: list
         -best_score: int
@@ -84,20 +82,22 @@ classDiagram
         +_save_data()
         +_reset_to_default()
         +add_quiz(new_quiz)
-        +delete_quiz(index): bool
-        +update_best_score(score): bool
+        +delete_quiz(index) bool
+        +update_best_score(score) bool
         +add_history(record)
     }
-
+    
     class QuizView {
         +display_menu()
         +show_message(msg)
-        +get_valid_number(prompt, min_val, max_val): int
-        +get_new_quiz_input(): tuple
+        +wait_for_enter()
+        +get_valid_number(prompt, min_val, max_val) int
+        +get_new_quiz_input() tuple
+        +show_quiz(quiz) int
         +show_quiz_list(quizzes)
         +show_history(history)
     }
-
+    
     class QuizController {
         -model: QuizModel
         -view: QuizView
@@ -105,13 +105,13 @@ classDiagram
         +play_quiz()
         +run()
     }
-
+    
     QuizController --> QuizModel : uses
     QuizController --> QuizView : uses
     QuizModel --> Quiz : manages
     QuizView --> Quiz : displays
+``` 
 
-```
 # 데이터 파일 설명(state.json 경로/역할/스키마)
 경로: 프로젝트 루트 디렉토리 (./state.json)
 역할: 프로그램 종료 후에도 추가된 퀴즈와 최고 점수가 유지되도록 데이터를 저장하는 데이터 영속성을 담당합니다
@@ -259,135 +259,42 @@ mpeg46551@c5r1s2 src % cat state.json
 ### Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as 사용자
-    participant C as Controller (main.py)
-    participant M as Model (quizGame.py)
-    participant V as View (quizView.py)
-    participant Q as Quiz Object (quiz.py)
-
-    User->>V: 1번 '퀴즈 풀기' 선택
-    V->>C: 선택 번호 전달
-    C->>M: 퀴즈 목록 데이터 요청
-    M-->>C: 퀴즈 리스트 반환
-    C->>V: 문제 수 선택 요청 (보너스 기능)
-    V-->>C: 선택된 문제 수 반환
-
-    loop 문제 수만큼 반복
-        C->>V: 문제 및 4개 선택지 출력
-        User->>V: 정답 입력 (1~4)
-        V-->>C: 검증된 정답 반환 (get_valid_number)
-        C->>Q: 정답 확인 요청 (is_correct)
-        Q-->>C: 정답 여부(True/False) 반환
-        C->>V: 정답/오답 결과 메시지 출력
-    end
-
-    C->>M: 게임 기록 추가 (add_history)
-    C->>M: 최고 점수 갱신 확인 (update_best_score)
-    M->>M: state.json에 데이터 저장 (_save_data)
-    C->>V: 최종 점수 및 결과 화면 출력
-```
-### Sequence Diagram Detail
-```mermaid
----
-config:
-  theme: mc
----
-sequenceDiagram
-    participant User
-    participant Main as main.py
+    participant User as 사용자
     participant Controller as QuizController
-    participant View as QuizView
     participant Model as QuizModel
-    participant FileSystem as state.json
+    participant View as QuizView
+    participant File as state.json
 
-    User->>Main: python main.py 실행
-    Main->>Controller: QuizController()
-    Controller->>Model: QuizModel()
-    Model->>FileSystem: state.json 읽기
-    FileSystem-->>Model: 데이터 로드
-    Model-->>Controller: 초기화 완료
-    Controller-->>Main: 준비 완료
+    User->>Controller: 프로그램 실행(run)
+    Controller->>Model: _load_data() 호출
+    Model->>File: state.json 읽기
+    File-->>Model: 퀴즈/점수/기록 데이터 반환
+    Model-->>Controller: 데이터 로드 완료
 
-    loop 메인 루프
+    loop 메인 메뉴 반복
         Controller->>View: display_menu()
-        View->>User: 메뉴 표시
-        User->>View: 선택 입력 (1~7)
-        View->>View: get_valid_number() 검증
-        View-->>Controller: 선택값 반환
+        View-->>User: 메뉴 표시
+        User->>View: 선택 입력
+        View-->>Controller: 선택 결과
 
-        alt 선택 = 1 (퀴즈 풀기)
-            Controller->>View: get_valid_number(문제수)
-            View->>User: 풀 문제 수 입력
-            User-->>View: 숫자 입력
-            View-->>Controller: 검증된 숫자
-            Controller->>Model: quizzes 가져오기
-            Model-->>Controller: Quiz 리스트
-            loop 각 문제마다
-                Controller->>View: show_message(문제)
-                View->>User: 문제와 선택지 출력
-                User->>View: 정답 번호 입력
-                View-->>Controller: 검증된 정답번호
-                Controller->>Model: is_correct(정답번호)
-                Model-->>Controller: True/False
-                Controller->>View: show_message(✅/❌)
-                View->>User: 결과 출력
-            end
-            Controller->>Model: add_history(기록)
-            Controller->>Model: update_best_score(점수)
-            Model->>FileSystem: _save_data() 저장
-            FileSystem-->>Model: 저장 완료
-            Controller->>View: show_message(최종점수)
-            View->>User: 점수 출력
-
-        else 선택 = 2 (퀴즈 추가)
-            Controller->>View: get_new_quiz_input()
-            View->>User: 문제/선택지/정답 입력
-            User-->>View: 데이터 입력
-            View-->>Controller: 검증된 퀴즈 데이터
-            Controller->>Model: add_quiz(새로운Quiz)
-            Model->>Model: quizzes.append()
-            Model->>FileSystem: _save_data() 저장
-            FileSystem-->>Model: 저장 완료
-
-        else 선택 = 3 (퀴즈 목록 보기)
-            Controller->>Model: quizzes 가져오기
-            Model-->>Controller: Quiz 리스트
-            Controller->>View: show_quiz_list(quizzes)
-            View->>User: 퀴즈 목록 출력
-
-        else 선택 = 4 (최고 점수 확인)
-            Controller->>Model: best_score 확인
-            Model-->>Controller: 점수값
-            Controller->>View: show_message(최고점수)
-            View->>User: 최고점수 출력
-
-        else 선택 = 5 (퀴즈 삭제)
-            Controller->>View: show_quiz_list(quizzes)
-            View->>User: 퀴즈 목록 출력
-            User->>View: 삭제할 번호 입력
-            View-->>Controller: 검증된 인덱스
-            Controller->>Model: delete_quiz(인덱스)
-            Model->>Model: del quizzes[index]
-            Model->>FileSystem: _save_data() 저장
-            FileSystem-->>Model: 저장 완료
-
-        else 선택 = 6 (기록 보기)
-            Controller->>Model: history 가져오기
-            Model-->>Controller: 히스토리 리스트
-            Controller->>View: show_history(history)
-            View->>User: 게임 기록 출력
-
-        else 선택 = 7 (종료)
-            Controller->>Controller: 루프 break
+        alt 퀴즈 풀기
+            Controller->>Model: 퀴즈 목록 가져오기
+            Controller->>View: get_valid_number(문제 수)
+            Controller->>View: show_quiz(문제 표시)
+            View-->>User: 정답 입력 요청
+            User->>View: 정답 입력
+            View-->>Controller: 정답 결과 전달
+            Controller->>Model: add_history(), update_best_score()
+            Model->>File: state.json 저장
+        else 퀴즈 추가/삭제/조회
+            Controller->>View: 관련 메서드 호출
+            View->>User: 입력/출력 상호작용
+            Controller->>Model: add_quiz(), delete_quiz()
+            Model->>File: 데이터 업데이트
+        else 종료
+            Controller-->>View: show_message("종료 안내")
         end
     end
-
-    Controller->>View: show_message(종료메시지)
-    View->>User: 👋 안전하게 종료합니다.
-    Main->>Main: 프로그램 종료
-
-    note over Controller,FileSystem: KeyboardInterrupt(Ctrl+C) 발생 시<br/>예외 처리 후 안전하게 종료
 ```
 ### 📌 Git 워크플로우
 * 최소 10개 이상의 의미 있는 커밋이 있어야 한다.
