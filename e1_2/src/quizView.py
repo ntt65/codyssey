@@ -102,13 +102,13 @@ class QuizView:
         for idx, choice in enumerate(quiz.choices, 1):
             print(f"  {idx}. {choice}")
                     # 사용자 입력 받기 (1~4 범위 검증)
-            ans = self.view.get_valid_number("정답: ", 1, 4)
+        ans = self.get_valid_number("정답: ", 1, 4)
         # 정답 확인
         if quiz.is_correct(ans):
-            self.view.show_message("✅ 정답!")
+            self.show_message("✅ 정답!")
             correct = 1
         else:
-            self.view.show_message(f"❌ 오답! 정답은 {quiz.answer}")
+            self.show_message(f"❌ 오답! 정답은 {quiz.answer}")
         return correct
 
     def show_quiz_list(self, quizzes):
