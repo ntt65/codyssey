@@ -98,7 +98,7 @@ class QuizModel:
             self._reset_to_default()
             self._save_data()
 
-    def _save_data(self):
+    def _save_data(self,file_name=None):
         """현재 상태를 state.json에 저장
         
         저장 형식:
@@ -109,7 +109,10 @@ class QuizModel:
         }
         
         인코딩: UTF-8, ensure_ascii=False (한글 저장 가능)
+        
         """
+        if file_name is None:
+            file_name = self.DATA_FILE
         try:
             # 저장할 데이터 구성
             data = {
@@ -118,7 +121,7 @@ class QuizModel:
                 "history": self.history  # 히스토리 저장
             }
             # JSON 파일 작성
-            with open(self.DATA_FILE, "w", encoding="utf-8") as f:
+            with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except IOError:
             # 저장 실패 시 먹음 처리 (프로그램 중단 없음)
