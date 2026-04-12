@@ -91,7 +91,26 @@ class QuizView:
         # 정답 번호 입력 (1~4 범위 검증)
         a = self.get_valid_number("정답(1-4): ", 1, 4)
         return q, c, a
-    
+    def show_quiz(self, quiz):
+        """퀴즈 문제와 선택지를 출력
+        
+        Args:
+            quiz (Quiz): 출력할 Quiz 객체
+        """
+        correct = 0
+        print(f"\n문제: {quiz.question}")
+        for idx, choice in enumerate(quiz.choices, 1):
+            print(f"  {idx}. {choice}")
+                    # 사용자 입력 받기 (1~4 범위 검증)
+            ans = self.view.get_valid_number("정답: ", 1, 4)
+        # 정답 확인
+        if quiz.is_correct(ans):
+            self.view.show_message("✅ 정답!")
+            correct = 1
+        else:
+            self.view.show_message(f"❌ 오답! 정답은 {quiz.answer}")
+        return correct
+
     def show_quiz_list(self, quizzes):
         """등록된 퀴즈 목록 표시
         
