@@ -67,36 +67,6 @@ class QuizModel:
             self._reset_to_default()
             self._save_data()
     
-    def _load_data(self):
-        """state.json에서 데이터 로드
-        
-        처리:
-        - 파일 없음: 기본 데이터로 초기화 및 저장
-        - 파일 손상: 필수 키 검증 후 손상 시 복구
-        - 예외 처리: JSON, 키, 타입 에러 등 모두 처리
-        """
-        # 파일이 없으면 기본 데이터로 초기화
-        if not os.path.exists(self.DATA_FILE):
-            self._reset_to_default()
-            self._save_data()
-            return
-
-        try:
-            # state.json 파일 읽기 (UTF-8 인코딩)
-            with open(self.DATA_FILE, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-                # 필수 키 검증
-                if "quizzes" not in raw or "best_score" not in raw:
-                    raise ValueError("필수 키 누락")
-                # 데이터 로드
-                self.quizzes = [Quiz.from_dict(q) for q in raw["quizzes"]]
-                self.best_score = int(raw["best_score"])
-                # 히스토리 로드 (없으면 빈 리스트)
-                self.history = raw.get("history", [])
-        # 데이터 손상 시 기본값으로 복구
-        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
-            self._reset_to_default()
-            self._save_data()
 
     def _save_data(self,file_name=None):
         """현재 상태를 state.json에 저장
