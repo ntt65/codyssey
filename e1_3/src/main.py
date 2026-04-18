@@ -41,7 +41,7 @@ class Controller:
         """사용자로부터 3x3 행렬 데이터를 직접 입력받아 MAC 점수를 비교하고 판정합니다."""
         # View를 통해 필터 2개와 패턴 1개를 입력받음 (기본 3x3)
         f_a, f_b, pattern = self.view.show_user_input(3) 
-        
+
         # Model을 이용해 각 필터별 MAC 결과값 계산
         res_a = self.model.mac_simulation(f_a, pattern) 
         res_b = self.model.mac_simulation(f_b, pattern)
