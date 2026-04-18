@@ -24,6 +24,15 @@ class View:
         print("2. data.json 분석") 
         print("3. 종료")
 
+    def show_user_input_title(self):
+        """사용자 입력 모드에서 각 행렬 입력 안내 제목을 출력합니다."""
+        print("\n" + "="*40)
+        print("    #[1] 사용자 입력 (3x3)")
+        print( "="*40+"\n")
+        print("필터 A, 필터 B, 패턴을 순서대로 입력하세요.\n")
+
+    
+
     def show_user_input(self, size):
         """
         사용자로부터 지정된 크기(N x N)의 행렬 데이터를 입력받습니다.
@@ -60,7 +69,8 @@ class View:
             return matrix
 
         # 필터 A, 필터 B, 입력 패턴을 순차적으로 입력받음
-        print("\n" + "-"*40)
+        self.show_user_input_title()
+        #print("\n" + "-"*40)
         filter_a = get_fixed_matrix("필터 A", size)
         filter_b = get_fixed_matrix("필터 B", size)
         print("-"*40)
