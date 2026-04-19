@@ -70,7 +70,7 @@ class Controller:
         results = []       # 개별 테스트 통과/실패 결과 저장 리스트
         perf_summary = {}  # 크기별(5, 13, 25) 성능 지표 저장 딕셔너리
 
-        self.view.show_analysis_header() # 분석 시작 헤더 출력
+        self.view.show_title(2, "JSON 분석") # 분석 시작 헤더 출력
         
         for p_key, p_data in patterns.items():
             try:
