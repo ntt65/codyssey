@@ -110,7 +110,7 @@ class View:
         JSON 내 개별 테스트 케이스의 분석 결과를 출력합니다.
         """
         status = "PASS" if is_pass else "FAIL"
-        self.show_title(3, f"{case_id} 분석 결과")
+        self.show_title(2, f"{case_id} 분석 결과")
         print(f"Cross 점수: {score_cross:.10f}")
         print(f"X 점수: {score_x:.10f}")
         print(f"판정: {decision} | expected: {expected} | {status}")
