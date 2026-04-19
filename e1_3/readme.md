@@ -50,6 +50,49 @@ sequenceDiagram
     participant M as Model
     participant V as View
 
+    U->>C: 모드 1 선택 (3x3 수동 입력)
+    
+    rect rgb(240, 240, 240)
+        Note over U, V: 필터 A, 필터 B, 입력 패턴에 대해 반복
+        loop 데이터 입력 및 검증
+            U->>V: 행렬 데이터 입력 (숫자, 공백 포함)
+            V->>V: 데이터 유효성 검사 (숫자 여부, 3x3 크기 확인)
+            alt 입력 오류 (문자 포함 또는 크기 불일치)
+                V-->>U: 오류 메시지 출력 및 재입력 요청
+            else 유효한 입력
+                V-->>C: 정제된 3x3 리스트 반환
+            end
+        end
+    end
+
+    C->>M: mac_simulation(Filter A, Pattern)
+    M-->>C: Score A 반환
+    C->>M: mac_simulation(Filter B, Pattern)
+    M-->>C: Score B 반환
+
+    C->>M: judge(Score A, Score B)
+    Note over M: abs(Score A - Score B) < 1e-9 확인
+    
+    alt 점수 차이 > Epsilon
+        M-->>C: 높은 점수의 필터 이름 반환 (A 또는 B)
+    else 점수 차이 < Epsilon (동점)
+        M-->>C: "판정 불가" 반환
+    end
+
+    C->>M: get_average_mac_time() 요청 (10회 반복 측정)
+    M-->>C: 평균 연산 시간(ms) 반환
+    
+    C->>V: 점수, 최종 판정, 연산 시간 전달
+    V-->>U: MAC 결과 리포트 출력
+```
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Controller
+    participant M as Model
+    participant V as View
+
     U->>C: 모드 2 선택 (JSON 분석)
     C->>V: 데이터 로딩 메시지 출력
     V-->>C: 로딩 완료
