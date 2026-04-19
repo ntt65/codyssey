@@ -1,4 +1,5 @@
 [이지현] (https://github.com/jhkr1/Codyssey)
+[이지영](https://github.com/L-jy16/Mini-NPU-Simulator)
 [김희준](https://github.com/TraceofLight/1_month_crunch)
 [*주재문](https://github.com/OliverJoo/david)
 [이동현](https://github.com/cauchy-P/la-codyssey)
