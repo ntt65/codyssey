@@ -1,7 +1,3 @@
-ß제시해주신 **Mini NPU Simulator** 프로젝트의 요구사항과 소스 코드(main.py, model.py, view.py, data.json)를 바탕으로 작성된 `README.md` 파일입니다.
-
----
-
 # 📝 Mini NPU Simulator 결과 리포트
 
 본 프로젝트는 AI 연산의 핵심인 **MAC(Multiply-Accumulate)** 연산의 원리를 이해하고, 이를 Python으로 직접 구현하여 패턴 인식 성능과 수치적 안정성을 분석하는 시뮬레이터입니다.
