@@ -13,7 +13,71 @@ NPU(Neural Processing Unit)의 핵심 연산인 **MAC(Multiply-Accumulate)**을 
     * `data.json`에 정의된 다양한 크기($5 \times 5$ ~ $25 \times 25$)의 필터와 패턴을 로드합니다.
     * 라벨 정규화(Cross/X)를 통해 기대값과 실제 판정 결과를 비교하여 정확도를 검증합니다.
     * 연산 크기별 평균 수행 시간 및 연산 횟수($N^2$)를 포함한 성능 분석표를 제공합니다.
+```mermaid
+classDiagram
+    class Controller {
+        +model: Model
+        +view: View
+        +run()
+        +mode_user_input()
+        +mode_json_analysis()
+    }
 
+    class Model {
+        +epsilon: float
+        +mac_simulation(filter_mat, pattern_mat) float
+        +get_average_mac_time(filter_mat, pattern_mat) float
+        +normalize_label(label) String
+        +judge(score_a, score_b) String
+    }
+
+    class View {
+        +show_main_menu()
+        +get_valid_number(prompt, min, max) int
+        +get_matrix_input(size) list
+        +show_case_result(id, sc_a, sc_b, res, exp, is_pass)
+        +show_performance_table(perf_data)
+        +show_summary(total, passed, failed, fail_list)
+    }
+
+    Controller --> Model : 연산 요청
+    Controller --> View : 출력 및 입력 요청
+```
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Controller
+    participant M as Model
+    participant V as View
+
+    U->>C: 모드 2 선택 (JSON 분석)
+    C->>V: 데이터 로딩 메시지 출력
+    V-->>C: 로딩 완료
+
+    loop 각 패턴 분석 (예: size_13_3)
+        C->>M: normalize_label("  cross. ") 요청
+        Note over M: .replace('.', '').strip() 수행
+        M-->>C: "Cross" 반환 (Expected 값 정규화)
+
+        C->>M: mac_simulation(filter, pattern) 수행
+        M-->>C: score_cross(25.0), score_x(1.0) 반환
+
+        C->>M: judge(25.0, 1.0) 요청
+        Note over M: abs(25-1) > 1e-9 확인
+        M-->>C: "Cross" 반환 (최종 판정)
+
+        alt 판정 == Expected
+            C->>V: 결과 출력 (PASS)
+        else 판정 != Expected
+            C->>V: 결과 출력 (FAIL)
+        end
+    end
+
+    C->>M: get_average_mac_time() 요청
+    M-->>C: 평균 연산 시간 반환
+    C->>V: 성능 분석 표 및 최종 요약 출력
+    V-->>U: 최종 결과 화면 표시
+```
 # 3. 핵심 로직 설명
 ## MAC (Multiply-Accumulate) 연산
 필터 행렬 $F$와 패턴 행렬 $P$가 주어졌을 때, 점수 $S$는 다음과 같이 계산됩니다.
