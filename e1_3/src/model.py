@@ -94,7 +94,15 @@ class Model:
         
         # 더 높은 점수를 받은 필터의 이름을 반환
         return "Cross" if score_a > score_b else "X"
-
+    
+    def judge_user_input(self, score_a, score_b):
+        # 두 점수의 절대 차이가 허용 오차 미만인지 확인 (부동소수점 오차 대응)
+        if abs(score_a - score_b) < self.epsilon: 
+            return "UNDECIDED" # 판정 불가 (동점)
+        
+        # 더 높은 점수를 받은 필터의 이름을 반환
+        return "A" if score_a > score_b else "B"
+    
     def load_json_data(self, file_path):
         """
         지정된 경로의 JSON 파일을 읽어 Python 딕셔너리로 반환합니다.
