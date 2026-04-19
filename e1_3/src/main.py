@@ -50,7 +50,7 @@ class Controller:
         avg_time = self.model.get_average_mac_time(f_a, pattern)
         
         # 두 점수를 비교하여 판정 결과(A, B, 또는 UNDECIDED) 도출
-        decision = self.model.judge(res_a, res_b)
+        decision = self.model.judge_user_input(res_a, res_b)
         
         # 결과 화면 출력
         self.view.show_mac_result(res_a, res_b, avg_time, decision)
@@ -91,6 +91,16 @@ class Controller:
                 f_x = filter_set.get('x')
                 input_pattern = p_data.get('input')
                 expected_raw = p_data.get('expected')
+
+                ### 🛡️ 시스템 안정성 (Error Handling)
+                # 데이터 분석 과정에서 발생할 수 있는 잠재적 오류를 방지하기 위해 2단계 검증 로직을 구축했습니다.
+
+                # 1. **데이터 무결성 검사 (Integrity Check)**: 
+                # - `mac_simulation` 연산 수행 전, 필터와 입력 패턴이 비어있지는 않은지(`None` 또는 빈 리스트) 체크합니다.
+                # - 데이터 누락 시 `ValueError`를 발생시켜 잘못된 연산 결과가 산출되는 것을 원천 차단했습니다.
+
+                # 2. **개별 케이스 격리 (Case Isolation)**:
+                # - 특정 패턴 데이터(`size_N_idx`)에 오류가 있더라도 프로그램 전체가 종료되지 않고, 해당 케이스만 'ERROR'로 표시한 뒤 다음 테스트를 계속 진행하도록 `try-except` 블록을 구성했습니다.
 
                 # 데이터 유효성 검사
                 if not f_cross or not f_x or not input_pattern:
