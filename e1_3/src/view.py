@@ -19,17 +19,16 @@ class View:
 
     def show_main_menu(self): 
         """사용자가 선택할 수 있는 프로그램 메인 메뉴를 출력합니다."""
-        print("\n[모드 선택]") 
+        self.show_title(0, "모드 선택")
         print("1. 사용자 입력 (3x3)") 
         print("2. data.json 분석") 
         print("3. 종료")
 
-    def show_user_input_title(self):
+    def show_title(self,num,title="3x3 사용자 입력 모드"):
         """사용자 입력 모드에서 각 행렬 입력 안내 제목을 출력합니다."""
         print("\n" + "="*40)
-        print("    #[1] 사용자 입력 (3x3)")
+        print(f"# [{num}] {title}")        
         print( "="*40+"\n")
-        print("필터 A, 필터 B, 패턴을 순서대로 입력하세요.\n")
 
     
 
@@ -43,37 +42,45 @@ class View:
             tuple: (filter_a, filter_b, pattern) 형태의 2차원 리스트 묶음
         """
         def get_fixed_matrix(name, size):
-            """내부 함수: 개별 행렬(필터 또는 패턴)을 입력받고 검증합니다."""
-            print(f"{name}를 입력하세요 ({size}줄 입력, 공백 구분):")
-            matrix = []
+            print(f"\n[{name} 입력] ({size}x{size} 크기, 공백 구분)")
+            
+            # 1. 미리 0.0으로 채워진 행렬 생성 (구조적 안정성 확보)
+            matrix = [[0.0 for _ in range(size)] for _ in range(size)]
+            
             i = 0
             while i < size:
                 try:
                     line = input(f'line {i+1} : ').strip()
-                    if not line: continue # 빈 줄 입력 시 스킵
+                    if not line:
+                        print(f"   -> ⚠ 입력 오류: 빈 줄입니다. 다시 입력하세요.")
+                        continue
                     
-                    # 공백 기준 분리 후 숫자로 변환
-                    row = [float(x) for x in line.split()] 
+                    parts = line.split()
+                    # 숫자 파싱 시도
+                    input_values = [float(x) for x in parts]
                     
-                    # 입력 데이터 길이 조정 (요구사항: 부족하면 0으로 채움)
-                    if len(row) > size:
-                        row = row[:size] # 초과 입력 시 잘라냄
-                    elif len(row) < size:
-                        row += [0] * (size - len(row)) # 부족할 경우 0으로 패딩
+                    # 2. 개수 검증 (미션 요구사항: 행/열 개수 불일치 체크)
+                    if len(input_values) != size:
+                        print(f"   -> ⚠ 입력 형식 오류: 각 줄에 {size}개의 숫자가 필요합니다. (현재 {len(input_values)}개)")
+                        # 개수가 안 맞으면 루프를 다시 돌아 해당 줄(i)을 재입력 받음
+                        continue 
                     
-                    matrix.append(row)
-                    i += 1 # 정상 입력 시 다음 행으로 이동
+                    # 3. 정상적인 경우 데이터 할당
+                    for j in range(size):
+                        matrix[i][j] = input_values[j]
+                    
+                    i += 1 # 다음 행으로 진행
+                    
                 except ValueError:
-                    # 숫자가 아닌 값이 포함된 경우 에러 메시지 출력 후 재입력
-                    print(f"⚠ 입력 형식 오류: 숫자가 아닌 값이 있습니다. 다시 입력하세요.")
+                    # 숫자 파싱 실패 시 안내 (미션 요구사항)
+                    print(f"   -> ⚠ 입력 형식 오류: 숫자가 아닌 값이 포함되어 있습니다. 다시 입력하세요.")
+            
             return matrix
-
         # 필터 A, 필터 B, 입력 패턴을 순차적으로 입력받음
-        self.show_user_input_title()
-        #print("\n" + "-"*40)
+        self.show_title(1, "3x3 사용자 입력 모드")
         filter_a = get_fixed_matrix("필터 A", size)
         filter_b = get_fixed_matrix("필터 B", size)
-        print("-"*40)
+        self.show_title(2, "패턴 입력") # 패턴 입력 전 별도의 제목 출력
         pattern = get_fixed_matrix("패턴", size)
         return filter_a, filter_b, pattern
 
@@ -103,7 +110,7 @@ class View:
         JSON 내 개별 테스트 케이스의 분석 결과를 출력합니다.
         """
         status = "PASS" if is_pass else "FAIL"
-        print(f"--- {case_id} ---")
+        self.show_title(3, f"{case_id} 분석 결과")
         print(f"Cross 점수: {score_cross:.10f}")
         print(f"X 점수: {score_x:.10f}")
         print(f"판정: {decision} | expected: {expected} | {status}")
