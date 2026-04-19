@@ -72,62 +72,73 @@ class Controller:
 
         self.view.show_analysis_header() # 분석 시작 헤더 출력
         
-        for p_key, p_val in patterns.items():
-            # 패턴 키 이름에서 크기 정보 추출 (예: 'size_5_1' -> '5')
-            size_str = p_key.split('_')[1] 
-            f_key = f"size_{size_str}" # 대응되는 필터 그룹 키 생성
-            
-            target_filters = filters.get(f_key, {})
-            # 각 필터 타입 로드 및 정규화
-            f_cross = target_filters.get('cross')
-            f_x = target_filters.get('x')
-            
-            input_pattern = p_val.get('input') # 입력된 이미지 패턴
-            # 기대값(expected)을 표준 라벨('Cross' 또는 'X')로 정규화
-            expected = self.model.normalize_label(p_val.get('expected'))
-            
-            # 스키마 검증: 필터 존재 여부 및 행 크기 일치 확인
-            if not f_cross or len(f_cross) != int(size_str):
-                results.append({'id': p_key, 'pass': False, 'reason': '필터 스키마 오류'})
+        for p_key, p_data in patterns.items():
+            try:
+                # 1. 키에서 사이즈 정보 추출 (예: size_5_1_Normal -> 5)
+                parts = p_key.split('_')
+                if len(parts) < 2:
+                    raise ValueError("잘못된 키 형식")
+                
+                size_str = parts[1] # '5', '13', '25' 추출
+                f_key = f"size_{size_str}"
+                filter_set = filters.get(f_key)
+
+                if not filter_set:
+                    raise ValueError(f"{f_key}에 해당하는 필터가 없습니다.")
+
+                # 2. 필터 및 패턴 데이터 가져오기
+                f_cross = filter_set.get('cross')
+                f_x = filter_set.get('x')
+                input_pattern = p_data.get('input')
+                expected_raw = p_data.get('expected')
+
+                # 데이터 유효성 검사
+                if not f_cross or not f_x or not input_pattern:
+                    raise ValueError("필터 또는 입력 패턴 데이터가 누락되었습니다.")
+
+                # 3. 라벨 정규화 및 MAC 연산
+                expected = self.model.normalize_label(expected_raw)
+                score_cross = self.model.mac_simulation(f_cross, input_pattern)
+                score_x = self.model.mac_simulation(f_x, input_pattern)
+                
+                # 4. 판정 및 결과 기록
+                decision = self.model.judge(score_cross, score_x)
+                is_pass = (decision == expected)
+                
+                self.view.show_case_result(p_key, score_cross, score_x, decision, expected, is_pass)
+                
+                results.append({
+                    'id': p_key, 
+                    'pass': is_pass, 
+                    'reason': f'판정 {decision} != 기대 {expected}' if not is_pass else ''
+                })
+
+                # 5. 성능 데이터 기록 (크기별로 한 번씩만 측정)
+                if size_str not in perf_summary:
+                    avg_t = self.model.get_average_mac_time(f_cross, input_pattern)
+                    perf_summary[size_str] = {'avg_time': avg_t, 'ops': int(size_str)**2}
+
+            except Exception as e:
+                # 예기치 못한 데이터 오류 발생 시 해당 케이스만 FAIL 처리
+                self.view.show_case_result(p_key, 0, 0, "ERROR", "UNKNOWN", False)
+                results.append({
+                    'id': p_key, 
+                    'pass': False, 
+                    'reason': f"오류: {str(e)}"
+                })
                 continue
 
-            # MAC 연산 수행 (Cross 필터 vs X 필터)
-            score_cross = self.model.mac_simulation(f_cross, input_pattern)
-            score_x = self.model.mac_simulation(f_x, input_pattern)
-            
-            # 수치 비교를 통한 최종 판정
-            decision = self.model.judge(score_cross, score_x)
-            
-            # 실제 판정과 기대값이 일치하는지 확인
-            is_pass = (decision == expected)
-            self.view.show_case_result(p_key, score_cross, score_x, decision, expected, is_pass)
-            
-            # 결과 리스트에 기록
-            results.append({
-                'id': p_key, 
-                'pass': is_pass, 
-                'reason': f'판정 {decision} != 기대 {expected}' if not is_pass else ''
-            })
-
-            # 크기별 성능 데이터 기록 (동일 크기는 한 번만 측정하여 효율성 제고)
-            if size_str not in perf_summary:
-                avg_t = self.model.get_average_mac_time(f_cross, input_pattern)
-                perf_summary[size_str] = {'avg_time': avg_t, 'ops': int(size_str)**2}
-
-        # 결과 집계: 통과 개수 및 실패 케이스 추출
+        # 결과 집계 및 출력
         passed = sum(1 for r in results if r['pass'])
         fails = [r for r in results if not r['pass']]
         
-        # 성능 분석 표 작성을 위한 데이터 정렬 (크기순)
         perf_list = [
             {'size': f"{k}x{k}", 'avg_time': v['avg_time'], 'ops': v['ops']} 
             for k, v in sorted(perf_summary.items(), key=lambda x: int(x[0]))
         ]
         
-        # 최종 통계 및 테이블 출력
         self.view.show_performance_table(perf_list)
         self.view.show_summary(len(results), passed, len(fails), fails)
-
 if __name__ == "__main__":
     # 엔트리 포인트: 컨트롤러 인스턴스 생성 및 실행
     Controller().run()
