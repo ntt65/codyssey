@@ -46,7 +46,7 @@ classDiagram
     Controller --> Model : 연산 요청
     Controller --> View : 출력 및 입력 요청
 ```
-## main.py meain menu
+## main.py main menu
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -158,6 +158,41 @@ sequenceDiagram
     M-->>C: 평균 연산 시간 반환
     C->>V: 성능 분석 표 및 최종 요약 출력
     V-->>U: 최종 결과 화면 표시
+```
+
+## 2. 동점(Undecided) 처리의 차이점
+부동소수점 오차를 고려한 동점(두 점수의 차이가 $1e-9$ 미만인 경우) 발생 시, 각 모드별 처리 방식은 다음과 같습니다.
+
+| 구분 | 모드 1 (사용자 입력) | 모드 2 (JSON 데이터 분석) |
+| :--- | :--- | :--- |
+| **출력 라벨** | **"판정 불가"**라는 문구로 표시됩니다. | **"UNDECIDED"**라는 표준 라벨로 표시됩니다. |
+| **판정 대상** | 사용자가 입력한 필터 A와 B 사이의 우열을 가립니다. | 정규화된 필터(Cross와 X) 점수를 비교합니다. |
+| **결과 집계** | 점수와 판정 결과를 화면에 보여주는 것에 집중합니다. | 판정 결과가 `expected` 값과 일치해야 하므로, FAIL로 집계됩니다. |
+
+* **차이점 분석**:[UI/UX 설계 전략]
+
+개별 결과 가독성: 사용자 입력 모드(Mode 1)는 단일 연산의 상세 수치(소수점 10자리)와 실행 시간에 집중한 show_mac_result를 사용합니다.
+
+대량 검증 가시성: JSON 분석 모드(Mode 2)는 수십 개의 데이터를 빠르게 훑을 수 있도록 판정 결과와 정답의 일치 여부(PASS/FAIL)를 직관적으로 노출하는 show_case_result를 사용하여 모드별 목적에 최적화된 화면을 제공합니다.
+
+```mermaid
+sequenceDiagram
+    participant C as Controller
+    participant M as Model
+    participant V as View
+
+    Note over C, V: [Mode 1] 사용자 입력
+    C->>M: judge_user_input(a, b)
+    M-->>C: decision ("A", "B", or "UNDECIDED")
+    C->>V: show_mac_result(res_a, res_b, time, decision)
+
+
+
+    Note over C, V: [Mode 2] JSON 분석
+    C->>M: judge(cross, x)
+    M-->>C: decision ("Cross", "X", or "UNDECIDED")
+    C->>C: is_pass = (decision == expected)
+    C->>V: show_case_result(p_key, s_c, s_x, decision, expected, is_pass)
 ```
 # 3. 핵심 로직 설명
 ## MAC (Multiply-Accumulate) 연산
@@ -373,16 +408,6 @@ for i in range(len(filter_mat)):    # N번 반복 (행)
 
 ---
 
-## 2. 동점(Undecided) 처리의 차이점
-부동소수점 오차를 고려한 동점(두 점수의 차이가 $1e-9$ 미만인 경우) 발생 시, 각 모드별 처리 방식은 다음과 같습니다.
-
-| 구분 | 모드 1 (사용자 입력) | 모드 2 (JSON 데이터 분석) |
-| :--- | :--- | :--- |
-| **출력 라벨** | **"판정 불가"**라는 문구로 표시됩니다. | **"UNDECIDED"**라는 표준 라벨로 표시됩니다. |
-| **판정 대상** | 사용자가 입력한 필터 A와 B 사이의 우열을 가립니다. | 정규화된 필터(Cross와 X) 점수를 비교합니다. |
-| **결과 집계** | 점수와 판정 결과를 화면에 보여주는 것에 집중합니다. | 판정 결과가 `expected` 값과 일치해야 하므로, FAIL로 집계됩니다. |
-
-* **차이점 분석**: 모드 2의 경우 동점이 나오면 이를 **실패(FAIL)** 케이스로 간주하고 결과 리포트에 포함시킵니다. 이는 모드 1이 사용자에게 정보를 제공하는 단순 판정 서비스인 반면, 모드 2는 주어진 정답(`expected`)과 비교하여 시스템의 정확성을 검증하는 **테스트 성격**을 띠기 때문입니다.
 
 ## 3. 결과 리포트
 
