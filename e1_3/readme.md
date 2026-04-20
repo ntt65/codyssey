@@ -46,6 +46,40 @@ classDiagram
     Controller --> Model : 연산 요청
     Controller --> View : 출력 및 입력 요청
 ```
+## main.py meain menu
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant Main as main.py (run)
+    participant Mod as model.py (Model)
+
+    U->>Main: 프로그램 실행
+    Main->>Main: 메뉴 표시 (1. 사용자 입력, 2. JSON 분석)
+    U->>Main: 모드 선택 (Input Mode Number)
+
+    alt 모드 1: 사용자 입력 (3x3)
+        Main->>U: 필터 A, B 및 패턴 입력 요청
+        U->>Main: 데이터 입력
+        Main->>Mod: mac_simulation(filter, pattern) 호출
+        Mod-->>Main: 점수(score) 반환
+        Main->>Mod: judge_user_input(score_a, score_b) 호출
+        Mod-->>Main: "A", "B", 또는 "UNDECIDED" 반환
+        Main->>U: 결과 및 연산 시간 출력
+
+    else 모드 2: JSON 데이터 분석
+        Main->>Mod: load_json_data("data.json") 호출
+        Mod-->>Main: JSON 데이터 반환
+        Main->>Main: 필터 로드 및 라벨 정규화
+        loop 모든 패턴 케이스 반복
+            Main->>Mod: normalize_label(expected) 호출
+            Main->>Mod: mac_simulation(filter, pattern) 호출
+            Mod-->>Main: 점수 반환
+            Main->>Mod: judge(score_cross, score_x) 호출
+            Mod-->>Main: "Cross", "X", 또는 "UNDECIDED" 반환
+        end
+        Main->>U: PASS/FAIL 결과 요약 및 성능 분석 표 출력
+    end
+```
 ## User Input Mode
 ```mermaid
 sequenceDiagram
