@@ -13,6 +13,7 @@ NPU(Neural Processing Unit)의 핵심 연산인 **MAC(Multiply-Accumulate)**을 
     * `data.json`에 정의된 다양한 크기($5 \times 5$ ~ $25 \times 25$)의 필터와 패턴을 로드합니다.
     * 라벨 정규화(Cross/X)를 통해 기대값과 실제 판정 결과를 비교하여 정확도를 검증합니다.
     * 연산 크기별 평균 수행 시간 및 연산 횟수($N^2$)를 포함한 성능 분석표를 제공합니다.
+## Class Diagram
 ```mermaid
 classDiagram
     note for Controller "main.py"
@@ -45,6 +46,7 @@ classDiagram
     Controller --> Model : 연산 요청
     Controller --> View : 출력 및 입력 요청
 ```
+## User Input Mode
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -87,7 +89,7 @@ sequenceDiagram
     C->>V: 점수, 최종 판정, 연산 시간 전달
     V-->>U: MAC 결과 리포트 출력
 ```
-
+## Jason Analitic Mode
 ```mermaid
 sequenceDiagram
     participant U as User
