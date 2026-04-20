@@ -15,6 +15,7 @@ NPU(Neural Processing Unit)의 핵심 연산인 **MAC(Multiply-Accumulate)**을 
     * 연산 크기별 평균 수행 시간 및 연산 횟수($N^2$)를 포함한 성능 분석표를 제공합니다.
 ```mermaid
 classDiagram
+    note for Controller "main.py"
     class Controller {
         +model: Model
         +view: View
@@ -29,6 +30,7 @@ classDiagram
         +get_average_mac_time(filter_mat, pattern_mat) float
         +normalize_label(label) String
         +judge(score_a, score_b) String
+        +judge_user_input(score_a, score_b) String
     }
 
     class View {
@@ -52,18 +54,18 @@ sequenceDiagram
 
     U->>C: 모드 1 선택 (3x3 수동 입력)
     
-    rect rgb(240, 240, 240)
-        Note over U, V: 필터 A, 필터 B, 입력 패턴에 대해 반복
-        loop 데이터 입력 및 검증
-            U->>V: 행렬 데이터 입력 (숫자, 공백 포함)
-            V->>V: 데이터 유효성 검사 (숫자 여부, 3x3 크기 확인)
-            alt 입력 오류 (문자 포함 또는 크기 불일치)
-                V-->>U: 오류 메시지 출력 및 재입력 요청
-            else 유효한 입력
-                V-->>C: 정제된 3x3 리스트 반환
-            end
+   
+    Note over U, V: 필터 A, 필터 B, 입력 패턴에 대해 반복
+    loop 데이터 입력 및 검증
+        U->>V: 행렬 데이터 입력 (숫자, 공백 포함)
+        V->>V: 데이터 유효성 검사 (숫자 여부, 3x3 크기 확인)
+        alt 입력 오류 (문자 포함 또는 크기 불일치)
+            V-->>U: 오류 메시지 출력 및 재입력 요청
+        else 유효한 입력
+            V-->>C: 정제된 3x3 리스트 반환
         end
     end
+
 
     C->>M: mac_simulation(Filter A, Pattern)
     M-->>C: Score A 반환
@@ -399,6 +401,8 @@ line 1 : 1 1 1 1
    -> ⚠ 입력 형식 오류: 각 줄에 3개의 숫자가 필요합니다. (현재 4개)
 line 1 : s 1 1
    -> ⚠ 입력 형식 오류: 숫자가 아닌 값이 포함되어 있습니다. 다시 입력하세요.
+
+[필터 A 입력] (3x3 크기, 공백 구분)
 line 1 : 0 1 0
 line 2 : 1 1 1
 line 3 : 0 1 0
@@ -424,7 +428,8 @@ line 3 : 0 1 0
 필터 A 점수: 5.0000000000
 필터 B 점수: 1.0000000000
 연산 시간(평균 10회): 0.0016 ms
-판정: Cross
+판정: A
+
 
 ========================================
 # [0] 모드 선택
