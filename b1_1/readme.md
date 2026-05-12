@@ -159,94 +159,80 @@ To                         Action      From
 ---
 
 ## 3. 디렉토리 및 권한(ACL) 체계 구축**
-기본 보안과 네트워크 설정이 끝났으니, 이제 실제 데이터가 저장될 **디렉토리를 생성하고 그룹별로 접근 권한**을 정교하게 설정할 차례입니다.
+기본 보안과 네트워크 설정후, 이제 실제 데이터가 저장될 **디렉토리를 생성하고 그룹별로 접근 권한**을 정교하게 설정
 
-다음 명령어들을 컨테이너 내부에서 순서대로 입력하여 체계를 구축해 보세요.
+### **[Step 3] 역할 기반 권한 관리(RBAC) 및 디렉토리 보안 설정**
 
-
-
-### 3.2. 그룹 및 계정 생성
-
-```bash
-root@dbdaf2e0de72:/# chgrp agent-common /home/agent-admin/agent-app/upload_files
-chgrp: invalid group: 'agent-common'
-```
-
-`chgrp: invalid group: 'agent-common'` 에러가 발생하는 이유는 현재 시스템에 **`agent-common`이라는 그룹이 생성되어 있지 않기 때문**입니다.
-
-미션의 요구사항에 따르면 디렉토리 권한 설정을 하기 전에 먼저 **계정과 그룹을 생성**하는 작업이 선행되어야 합니다. 아래 순서대로 명령어를 입력하여 그룹과 계정을 먼저 만든 후, 다시 디렉토리 권한 설정을 진행해 보세요.
-
-### 3.2.1. 그룹 및 계정 생성 (먼저 수행)
-
-루트(`root`) 권한에서 다음 명령어를 순서대로 입력하세요.
+#### **3.1. 그룹 및 계정 생성 (기반 구축)**
+그룹이 존재하지 않으면 권한 부여 시 에러가 발생하므로, 반드시 **그룹을 먼저 만들고 계정을 생성**해야 합니다.
 
 ```bash
 # 1. 그룹 생성
-root@dbdaf2e0de72:/# groupadd agent-common
-root@dbdaf2e0de72:/# groupadd agent-core
+groupadd agent-common
+groupadd agent-core
 
-# 2. 사용자 계정 생성 (홈 디렉토리 생성 및 쉘 지정)
-root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-admin
-root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-dev
-root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-test
-
-# 3. 사용자를 그룹에 추가
-# agent-common 그룹에는 모두 포함
-root@dbdaf2e0de72:/# usermod -aG agent-common agent-admin
-root@dbdaf2e0de72:/# usermod -aG agent-common agent-dev
-root@dbdaf2e0de72:/# usermod -aG agent-common agent-test
-
-# agent-core 그룹에는 admin과 dev만 포함
-root@dbdaf2e0de72:/# usermod -aG agent-core agent-admin
-root@dbdaf2e0de72:/# usermod -aG agent-core agent-dev
-
+# 2. 계정 생성 및 그룹 배정 (한 번에 처리)
+# agent-common은 모두 포함, agent-core는 admin/dev만 포함
+useradd -m -s /bin/bash -G agent-common,agent-core agent-admin
+useradd -m -s /bin/bash -G agent-common,agent-core agent-dev
+useradd -m -s /bin/bash -G agent-common agent-test
 ```
-**# 3.1. 미션용 디렉토리 생성**
-먼저 앱 실행에 필요한 핵심 디렉토리들을 만듭니다. (AGENT_HOME을 `/home/agent-admin/agent-app`으로 가정할 때의 예시입니다)
-```bash
-# 디렉토리 생성
+*   **보안 원칙:** `agent-test` 계정은 핵심 보안 그룹인 `agent-core`에서 제외하여 철저히 격리합니다.
 
-mkdir -p /home/agent-admin/agent-app/upload_files
-mkdir -p /home/agent-admin/agent-app/api_keys
+#### **3.2. 미션용 디렉토리 생성**
+애플리케이션 홈 디렉토리(`AGENT_HOME`)를 기준으로 필요한 구조를 만듭니다.
+
+```bash
+# 변수 설정 (작업 편의성)
+export AGENT_HOME=/home/agent-admin/agent-app
+
+# 디렉토리 생성
+mkdir -p $AGENT_HOME/upload_files
+mkdir -p $AGENT_HOME/api_keys
 mkdir -p /var/log/agent-app
 ```
 
-### 3.2.2. 디렉토리 소유권 및 권한 설정 (다시 수행)
-
-그룹이 정상적으로 생성되었다면, 이제 에러가 났던 명령어를 다시 실행할 수 있습니다.
-
-
-### 3.2.3. 소유 그룹 변경
-```bash
-
-root@dbdaf2e0de72:/# chgrp agent-common /home/agent-admin/agent-app/{upload_files,api_keys}
-root@dbdaf2e0de72:/# chgrp agent-core /var/log/agent-app
-
-root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/upload_files
-drwxr-xr-x 1 root agent-common 0 May 11 10:54 /home/agent-admin/agent-app/upload_files
-root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/api_keys
-drwxr-xr-x 1 root agent-core 0 May 11 10:54 /home/agent-admin/agent-app/api_keys
-root@dbdaf2e0de72:/# ls -ld /var/log/agent-app
-drwxr-xr-x 1 root agent-core 0 May 11 10:55 /var/log/agent-app
-```
-
-### 3.2.4. 권한 설정 (770: 소유자/그룹은 모든 권한, 나머지는 없음)
+#### **3.3. 소유권 및 심화 권한 설정 (RBAC + ACL)**
+단순한 `chmod`를 넘어, 협업 시 권한이 꼬이지 않도록 **SetGID**와 **ACL**을 적용하는 것이 핵심입니다.
 
 ```bash
-root@dbdaf2e0de72:/# chmod 770 /home/agent-admin/agent-app/upload_files
-root@dbdaf2e0de72:/# chmod 770 /home/agent-admin/agent-app/api_keys
-root@dbdaf2e0de72:/# chmod 770 /var/log/agent-app
+# 1. 그룹 소유권 변경
+chgrp agent-common $AGENT_HOME/upload_files
+chgrp agent-core $AGENT_HOME/api_keys
+chgrp agent-core /var/log/agent-app
 
-root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/upload_files
-drwxrwx--- 1 root agent-common 0 May 11 10:54 /home/agent-admin/agent-app/upload_files
-root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/api_keys
-drwxrwx--- 1 root agent-core 0 May 11 10:54 /home/agent-admin/agent-app/api_keys
-root@dbdaf2e0de72:/# ls -ld /var/log/agent-app
-drwxrwx--- 1 root agent-core 0 May 11 10:55 /var/log/agent-app
+# 2. 기본 권한 및 SetGID 적용
+# upload_files에 2770을 주면 이후 생성 파일도 그룹 소유권이 유지됩니다.
+chmod 2770 $AGENT_HOME/upload_files
+chmod 770 $AGENT_HOME/api_keys
+chmod 770 /var/log/agent-app
 
+# 3. Default ACL 설정 (자동 권한 상속)
+# 새로 생기는 파일에도 그룹 rwx 권한을 강제로 부여합니다.
+setfacl -d -m g:agent-common:rwx $AGENT_HOME/upload_files
+setfacl -d -m g:agent-core:rwx $AGENT_HOME/api_keys
+setfacl -d -m g:agent-core:rwx /var/log/agent-app
 ```
 
-**성공 시 출력 예시:**
-`drwxrwx--- 2 root agent-common ... upload_files` 처럼 그룹명이 정확히 표시되어야 합니다.
+#### **3.4. 최종 검증 및 상태 확인**
+설정이 요구사항에 맞게 반영되었는지 반드시 확인해야 합니다.
 
-**Tip:** 만약 소유자도 `root`가 아닌 `agent-admin`으로 바꾸고 싶다면 `chown agent-admin:agent-common [경로]` 명령어를 사용하시면 됩니다. 미션지 가이드에 따라 소유 그룹을 먼저 맞추는 것이 핵심입니다!
+```bash
+# 계정 그룹 소속 확인
+id agent-admin && id agent-dev && id agent-test
+
+# 디렉토리 권한 및 그룹 확인
+ls -ld $AGENT_HOME/upload_files
+ls -ld $AGENT_HOME/api_keys
+ls -ld /var/log/agent-app
+```
+
+---
+
+### **💡 고쳐진 내용의 핵심 요약**
+1.  **순서 교정:** 에러를 방지하기 위해 `groupadd` → `useradd` → `chgrp` 순서로 재배치했습니다.
+2.  **`api_keys` 보안 강화:** 이전 작성본에서 `agent-common`으로 되어 있던 `api_keys`의 그룹을 **`agent-core`**로 수정하여 테스트 계정의 접근을 차단했습니다.
+3.  **SetGID 도입:** 공유 폴더에 `2770` 권한을 부여하여 협업 중 발생하는 권한 오류를 원천 봉쇄했습니다.
+4.  **ACL 적용:** `setfacl`을 통해 파일 생성 시마다 권한을 일일이 수정하지 않아도 보안 정책이 유지되도록 자동화했습니다.
+
+이제 이 순서대로 터미널에 입력하시면 어제의 에러 없이 완벽한 보안 체계를 구축하실 수 있습니다. 바로 실행해 보시겠어요?
