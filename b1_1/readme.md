@@ -76,7 +76,8 @@ root@41bc6dbe4c07:/# service ssh start
 ```bash
 root@41bc6dbe4c07:/# service ssh status
  * sshd is running
- root@41bc6dbe4c07:/# ss -tulnp | grep sshd
+root@41bc6dbe4c07:/# apt install -y iproute2
+root@41bc6dbe4c07:/# ss -tulnp | grep sshd
 tcp   LISTEN 0      128          0.0.0.0:20022      0.0.0.0:*    users:(("sshd",pid=3972,fd=3))
 tcp   LISTEN 0      128             [::]:20022         [::]:*    users:(("sshd",pid=3972,fd=4))
 ```
@@ -90,10 +91,12 @@ service ssh restart
 SSH라는 '문'을 바꿨으니, 이제 그 문을 지킬 '보안 요원'을 배치해야 합니다. 소스에 따르면 **TCP 20022(SSH)**와 TCP 15034(APP) 포트만 허용하는 것이 핵심입니다
 .
 ### 2-1. 기본 정책 설정: 들어오는 모든 연결은 차단하고, 나가는 연결은 허용합니다.
+
 * ufw default deny incoming
 * ufw default allow outgoing
 
 ```bash
+root@41bc6dbe4c07:/# apt update && apt install -y ufw
 root@41bc6dbe4c07:/# ufw default deny incoming
 Default incoming policy changed to 'deny'
 (be sure to update your rules accordingly)
@@ -145,3 +148,105 @@ To                         Action      From
 20022/tcp (v6)             ALLOW IN    Anywhere (v6)
 ```
 
+### 2-4-1. 현재 상태 분석 및 성공 확인**
+출력된 `ufw status verbose` 결과는 미션 요구사항을 정확히 충족하고 있습니다.
+*   **방화벽 활성화:** `Status: active`로 보안 요원이 정상 근무 중입니다.
+*   **기본 정책 적용:** `Default: deny (incoming)`를 통해 허용되지 않은 모든 외부 접속을 차단하는 보안 원칙을 수립했습니다.
+*   **필수 포트 허용:** 미션에서 명시한 **20022/tcp (SSH)**와 **15034/tcp (APP)** 포트가 `ALLOW IN` 상태로 정확히 열려 있습니다.
+
+이 출력 화면은 나중에 제출하실 **'요구사항 수행 내역서'의 핵심 증거 자료**가 되므로 잘 기록해 두시기 바랍니다.
+
+---
+
+## 3. 디렉토리 및 권한(ACL) 체계 구축**
+기본 보안과 네트워크 설정이 끝났으니, 이제 실제 데이터가 저장될 **디렉토리를 생성하고 그룹별로 접근 권한**을 정교하게 설정할 차례입니다.
+
+다음 명령어들을 컨테이너 내부에서 순서대로 입력하여 체계를 구축해 보세요.
+
+
+
+### 3.2. 그룹 및 계정 생성
+
+```bash
+root@dbdaf2e0de72:/# chgrp agent-common /home/agent-admin/agent-app/upload_files
+chgrp: invalid group: 'agent-common'
+```
+
+`chgrp: invalid group: 'agent-common'` 에러가 발생하는 이유는 현재 시스템에 **`agent-common`이라는 그룹이 생성되어 있지 않기 때문**입니다.
+
+미션의 요구사항에 따르면 디렉토리 권한 설정을 하기 전에 먼저 **계정과 그룹을 생성**하는 작업이 선행되어야 합니다. 아래 순서대로 명령어를 입력하여 그룹과 계정을 먼저 만든 후, 다시 디렉토리 권한 설정을 진행해 보세요.
+
+### 3.2.1. 그룹 및 계정 생성 (먼저 수행)
+
+루트(`root`) 권한에서 다음 명령어를 순서대로 입력하세요.
+
+```bash
+# 1. 그룹 생성
+root@dbdaf2e0de72:/# groupadd agent-common
+root@dbdaf2e0de72:/# groupadd agent-core
+
+# 2. 사용자 계정 생성 (홈 디렉토리 생성 및 쉘 지정)
+root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-admin
+root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-dev
+root@dbdaf2e0de72:/# useradd -m -s /bin/bash agent-test
+
+# 3. 사용자를 그룹에 추가
+# agent-common 그룹에는 모두 포함
+root@dbdaf2e0de72:/# usermod -aG agent-common agent-admin
+root@dbdaf2e0de72:/# usermod -aG agent-common agent-dev
+root@dbdaf2e0de72:/# usermod -aG agent-common agent-test
+
+# agent-core 그룹에는 admin과 dev만 포함
+root@dbdaf2e0de72:/# usermod -aG agent-core agent-admin
+root@dbdaf2e0de72:/# usermod -aG agent-core agent-dev
+
+```
+**# 3.1. 미션용 디렉토리 생성**
+먼저 앱 실행에 필요한 핵심 디렉토리들을 만듭니다. (AGENT_HOME을 `/home/agent-admin/agent-app`으로 가정할 때의 예시입니다)
+```bash
+# 디렉토리 생성
+
+mkdir -p /home/agent-admin/agent-app/upload_files
+mkdir -p /home/agent-admin/agent-app/api_keys
+mkdir -p /var/log/agent-app
+```
+
+### 3.2.2. 디렉토리 소유권 및 권한 설정 (다시 수행)
+
+그룹이 정상적으로 생성되었다면, 이제 에러가 났던 명령어를 다시 실행할 수 있습니다.
+
+
+### 3.2.3. 소유 그룹 변경
+```bash
+
+root@dbdaf2e0de72:/# chgrp agent-common /home/agent-admin/agent-app/{upload_files,api_keys}
+root@dbdaf2e0de72:/# chgrp agent-core /var/log/agent-app
+
+root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/upload_files
+drwxr-xr-x 1 root agent-common 0 May 11 10:54 /home/agent-admin/agent-app/upload_files
+root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/api_keys
+drwxr-xr-x 1 root agent-core 0 May 11 10:54 /home/agent-admin/agent-app/api_keys
+root@dbdaf2e0de72:/# ls -ld /var/log/agent-app
+drwxr-xr-x 1 root agent-core 0 May 11 10:55 /var/log/agent-app
+```
+
+### 3.2.4. 권한 설정 (770: 소유자/그룹은 모든 권한, 나머지는 없음)
+
+```bash
+root@dbdaf2e0de72:/# chmod 770 /home/agent-admin/agent-app/upload_files
+root@dbdaf2e0de72:/# chmod 770 /home/agent-admin/agent-app/api_keys
+root@dbdaf2e0de72:/# chmod 770 /var/log/agent-app
+
+root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/upload_files
+drwxrwx--- 1 root agent-common 0 May 11 10:54 /home/agent-admin/agent-app/upload_files
+root@dbdaf2e0de72:/# ls -ld /home/agent-admin/agent-app/api_keys
+drwxrwx--- 1 root agent-core 0 May 11 10:54 /home/agent-admin/agent-app/api_keys
+root@dbdaf2e0de72:/# ls -ld /var/log/agent-app
+drwxrwx--- 1 root agent-core 0 May 11 10:55 /var/log/agent-app
+
+```
+
+**성공 시 출력 예시:**
+`drwxrwx--- 2 root agent-common ... upload_files` 처럼 그룹명이 정확히 표시되어야 합니다.
+
+**Tip:** 만약 소유자도 `root`가 아닌 `agent-admin`으로 바꾸고 싶다면 `chown agent-admin:agent-common [경로]` 명령어를 사용하시면 됩니다. 미션지 가이드에 따라 소유 그룹을 먼저 맞추는 것이 핵심입니다!
