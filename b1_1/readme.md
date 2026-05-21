@@ -395,3 +395,31 @@ default:other::---
 4.  **ACL 적용:** `setfacl`을 통해 파일 생성 시마다 권한을 일일이 수정하지 않아도 보안 정책이 유지되도록 자동화했습니다.
 
 이제 이 순서대로 터미널에 입력하시면 어제의 에러 없이 완벽한 보안 체계를 구축하실 수 있습니다. 바로 실행해 보시겠어요?
+
+## 4.[Step 4] 애플리케이션 실행 환경 구성
+1. nano로 .bashrc 파일 열기
+```bash
+root@c4361d2f7dc5:/# su -agent-admin
+agent-admin@c4361d2f7dc5:~$  nano ~/.bashrc
+2. 여러 줄 한꺼번에 붙여넣기
+방향키를 이용해 파일의 맨 아랫줄 빈 공간으로 커서를 이동시킨 후, 아래 5줄을 복사해서 그대로 붙여넣기(윈도우/WSL2의 경우 마우스 우클릭, 맥의 경우 Cmd + V) 하시면 됩니다.
+export AGENT_HOME=/home/agent-admin/agent-app
+export AGENT_PORT=15034
+export AGENT_UPLOAD_DIR=$AGENT_HOME/upload_files
+export AGENT_KEY_PATH=$AGENT_HOME/api_keys/t_secret.key
+export AGENT_LOG_DIR=/var/log/agent-app
+3. 저장하고 빠져나오기
+제공된 소스 가이드에 명시된 단축키를 활용하여 저장합니다
+.
+키보드에서 Ctrl + O 를 누릅니다. (저장)
+파일 이름 확인 프롬프트가 나오면 그대로 Enter 를 칩니다.
+키보드에서 Ctrl + X 를 누릅니다. (빠져나오기)
+agent-admin@c4361d2f7dc5:~$  source ~/.bashrc
+agent-admin@c4361d2f7dc5:~$  env | grep AGENT 
+AGENT_UPLOAD_DIR=/home/agent-admin/agent-app/upload_files
+AGENT_PORT=15034
+AGENT_KEY_PATH=/home/agent-admin/agent-app/api_keys/t_secret.key
+AGENT_HOME=/home/agent-admin/agent-app
+AGENT_LOG_DIR=/var/log/agent-app
+
+```
