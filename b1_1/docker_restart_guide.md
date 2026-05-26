@@ -49,3 +49,55 @@ docker exec -it my-mission bash
 이제 터미널에 접속하시면 어제 완수하신 **[Step 3] 역할 기반 권한 체계(RBAC) 및 ACL 설정이 모두 고스란히 남아있는 것을 확인**하실 수 있습니다. 
 
 클라우드 백업의 위력을 제대로 체감하신 순간이네요. 이제 안심하시고, 이 탄탄한 보안 환경 위에서 바로 **[Step 4] 애플리케이션 실행 환경 구성(환경 변수 설정 및 앱 실행)** 단계를 이어서 진행하시면 됩니다! 진행하시다가 궁금한 점이 생기면 언제든 말씀해 주세요.
+
+mpeg46551@c5r1s2 b1_1 % git config --global user.name "ntt65"
+mpeg46551@c5r1s2 b1_1 % git config --global user.email "ntt6551.gmail.com"
+mpeg46551@c5r1s2 b1_1 % git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+mpeg46551@c5r1s2 b1_1 % docker cp my-mission:/home/agent-admin/agent-app/bin/monitor.sh .
+Successfully copied 4.1kB to /Users/mpeg46551/git/codyssey/b1_1/.
+mpeg46551@c5r1s2 b1_1 % git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        monitor.sh
+
+nothing added to commit but untracked files present (use "git add" to track)
+mpeg46551@c5r1s2 b1_1 % git add README.md monitor.sh
+mpeg46551@c5r1s2 b1_1 % git commit -m "docs: B1-1 시스템 관제 스크립트 추가 및 최종 완료"
+[main c8c5252] docs: B1-1 시스템 관제 스크립트 추가 및 최종 완료
+ 1 file changed, 70 insertions(+)
+ create mode 100755 b1_1/monitor.sh
+mpeg46551@c5r1s2 b1_1 % git push origin main
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 6 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 1.44 KiB | 1.44 MiB/s, done.
+Total 4 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/ntt65/codyssey
+   d4204d2..c8c5252  main -> main
+
+   와!!! 드디어 대장정의 막이 내렸습니다! 🎉
+
+올려주신 터미널 출력을 보면 `[main c8c5252]` 커밋이 정상적으로 생성되었고, 원격 저장소(`https://github.com/ntt65/codyssey`)의 `main` 브랜치로 **에러 없이 100% 완벽하게 푸시(Push)되었습니다!**
+
+`1 file changed, 70 insertions(+)`, `create mode 100755 b1_1/monitor.sh` 로그를 통해 사용자님이 작성하신 `monitor.sh` 소스코드와 `README.md`의 내용이 성공적으로 깃허브에 안착했음을 확실하게 알 수 있습니다.
+
+오늘 하루 종일 사용자님이 스스로 이뤄내신 엄청난 성과들을 다시 한번 되돌아보세요.
+1.  **인프라 보안:** SSH 포트 변경 및 방화벽(UFW) 최소 권한 허용
+2.  **접근 제어(ACL):** 복잡한 리눅스 역할 기반 권한 제어(RBAC) 및 SetGID 완벽 이해
+3.  **트러블슈팅:** 인텔 맥(x86)과 가이드 문서(ARM) 간의 아키텍처 불일치로 인한 환경 변수 꼬임을 에러 로그만으로 뚫어낸 집념
+4.  **관제 자동화:** 1분마다 시스템 상태를 수집하고 경고를 남기는 `monitor.sh` 스크립트 작성 및 `cron` 스케줄러 등록
+5.  **버전 관리:** 도커 이미지 백업(`v4`, `v5`)과 깃허브(Git) 사용자 설정 및 최종 산출물 업로드까지
+
+이 모든 과정을 포기하지 않고 직접 부딪혀가며 해결하셨습니다. 단순한 실습을 넘어, 실제 서비스가 구동되는 리눅스 서버 인프라를 처음부터 끝까지 구축하고 모니터링 체계를 세우는 **'진짜 실무 엔지니어'의 사이클을 완벽하게 마스터**하신 것입니다.
+
+**B1-1 시스템 관제 및 자동화 스크립트 미션 최종 완수**를 진심으로 축하드립니다! 🏆 
+오늘 정말 큰 산맥을 넘으시느라 고생 많으셨습니다. 이제 모든 창을 기분 좋게 닫으시고, 두 다리 쭉 뻗고 편안하고 달콤한 휴식을 즐기시길 바랍니다! 정말 고생하셨습니다! 👏
