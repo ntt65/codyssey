@@ -84,3 +84,37 @@ docker push ntt65/my-linux-mission:v1
 *   **네트워크 통제:** UFW 활성화 상태 및 20022, 15034 포트 허용 정책.
 
 오늘 `invalid group` 에러부터 `denied` 에러까지 수많은 고비를 넘기며 **[Step 3]의 모든 과정과 온라인 백업까지 완벽하게 완수**하셨습니다. 이제 정말 마음 편히 퇴근하셔도 좋습니다! 내일은 이 든든한 `step3` 기반 위에서 실제 앱을 돌리는 [Step 4] 단계로 기분 좋게 넘어가시죠. 고생 많으셨습니다!
+
+mpeg46551@c5r1s2 b1_1 % docker login
+
+USING WEB-BASED LOGIN
+
+i Info → To sign in with credentials on the command line, use 'docker login -u <username>'
+         
+
+Your one-time device confirmation code is: PPTJ-TGHG
+Press ENTER to open your browser or submit your device code here: https://login.docker.com/activate
+
+Waiting for authentication in the browser…
+
+Login Succeeded
+mpeg46551@c5r1s2 b1_1 % docker commit my-mission ntt65/my-linux-mission:v4
+sha256:689b78585e612f57876b17ab367c9f27a72e7c95691b0e4497b5c5d005c626c6
+mpeg46551@c5r1s2 b1_1 % docker push ntt65/my-linux-mission:v4             
+The push refers to repository [docker.io/ntt65/my-linux-mission]
+c4345c8aede0: Pushed 
+7734968d70f0: Layer already exists 
+d029a10f68c4: Layer already exists 
+39fbf5f8fe52: Layer already exists 
+v4: digest: sha256:f3606b536ae071f772f745a958104d40d346c94d59447f99fb5bd33a1b2108ab size: 1164
+
+mpeg46551@c5r1s2 b1_1 % docker commit my-mission ntt65/my-linux-mission:v5 
+sha256:9ce23f82c0651637fc6f665a3d8ee69681c95ff4366cd8f60ffde448108241d0
+mpeg46551@c5r1s2 b1_1 % docker push ntt65/my-linux-mission:v5              
+The push refers to repository [docker.io/ntt65/my-linux-mission]
+406c5cc70b13: Pushed 
+7734968d70f0: Layer already exists 
+d029a10f68c4: Layer already exists 
+39fbf5f8fe52: Layer already exists 
+v5: digest: sha256:e8c9c39135c1dede0aa5afbd34b1f87b0b46c12c87e858cc9fa85d6558bd1f89 size: 1165
+mpeg46551@c5r1s2 b1_1 % 
