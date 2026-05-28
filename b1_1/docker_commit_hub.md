@@ -118,3 +118,20 @@ d029a10f68c4: Layer already exists
 39fbf5f8fe52: Layer already exists 
 v5: digest: sha256:e8c9c39135c1dede0aa5afbd34b1f87b0b46c12c87e858cc9fa85d6558bd1f89 size: 1165
 mpeg46551@c5r1s2 b1_1 % 
+
+[2026-05-28:21:51]
+mpeg46551@c5r1s4 codyssey % docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+mpeg46551@c5r1s4 codyssey % docker ps -a
+CONTAINER ID   IMAGE                       COMMAND       CREATED       STATUS                      PORTS     NAMES
+d6adc3ed90a9   ntt65/my-linux-mission:v5   "/bin/bash"   4 hours ago   Exited (0) 21 seconds ago             mission-box
+mpeg46551@c5r1s4 codyssey % docker commit mission-box ntt65/my-linux-mission:v6
+sha256:ec9813f96bd727163d774c6efbd96929d327b165232e429b3118426f2a8d21b1
+mpeg46551@c5r1s4 codyssey % docker push ntt65/my-linux-mission:v6
+The push refers to repository [docker.io/ntt65/my-linux-mission]
+9a026a0a25df: Pushed 
+9e9bc94f4591: Layer already exists 
+7734968d70f0: Layer already exists 
+d029a10f68c4: Layer already exists 
+39fbf5f8fe52: Layer already exists 
+v6: digest: sha256:cb1ba1409986073c407c10aefd1bf7a09cf7feed9743e0d6a54338910c7041f5 size: 1376
