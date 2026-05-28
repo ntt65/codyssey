@@ -700,3 +700,290 @@ d029a10f68c4: Layer already exists
 39fbf5f8fe52: Layer already exists 
 v5: digest: sha256:e8c9c39135c1dede0aa5afbd34b1f87b0b46c12c87e858cc9fa85d6558bd1f89 size: 1165
 mpeg46551@c5r1s2 b1_1 % 
+
+
+독커 리로딩 재작업준비
+mpeg46551@c5r1s4 codyssey % git config --global user.name ntt65
+mpeg46551@c5r1s4 codyssey % git config --global user.email ntt6551@gmail.com
+mpeg46551@c5r1s4 codyssey % git fetch
+mpeg46551@c5r1s4 codyssey % git push
+Everything up-to-date
+mpeg46551@c5r1s4 codyssey % docker login
+
+USING WEB-BASED LOGIN
+
+i Info → To sign in with credentials on the command line, use 'docker login -u <username>'
+         
+
+Your one-time device confirmation code is: VGVT-PRZQ
+Press ENTER to open your browser or submit your device code here: https://login.docker.com/activate
+
+Waiting for authentication in the browser…
+
+Login Succeeded
+mpeg46551@c5r1s4 codyssey % docker run -it --privileged -p 20022:20022 -p 15034:15034 --name mission-box ntt65/my-linux-mission:v5 /bin/bash
+Unable to find image 'ntt65/my-linux-mission:v5' locally
+v5: Pulling from ntt65/my-linux-mission
+42041b00303d: Pull complete 
+1ac9e085fedc: Pull complete 
+ad21d5411b2d: Pull complete 
+9ab105153c77: Pull complete 
+Digest: sha256:fdd2d536d9993a7e539ecee56e1b268cabe8b8277088aa5811483acfed882064
+Status: Downloaded newer image for ntt65/my-linux-mission:v5
+root@d6adc3ed90a9:/# service ssh status
+ * sshd is not running
+root@d6adc3ed90a9:/# service ssh start 
+ * Starting OpenBSD Secure Shell server sshd                                                                                  [ OK ] 
+root@d6adc3ed90a9:/# service ssh status
+ * sshd is running
+root@d6adc3ed90a9:/# ufw status verbose
+Status: inactive
+root@d6adc3ed90a9:/# ss -tulnp | grep sshd
+tcp   LISTEN 0      128          0.0.0.0:20022      0.0.0.0:*    users:(("sshd",pid=37,fd=3))
+tcp   LISTEN 0      128             [::]:20022         [::]:*    users:(("sshd",pid=37,fd=4))
+root@d6adc3ed90a9:/# ufw enable
+Firewall is active and enabled on system startup
+root@d6adc3ed90a9:/# ufw status verbose
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+15034/tcp                  ALLOW IN    Anywhere                  
+20022/tcp                  ALLOW IN    Anywhere                  
+15034/tcp (v6)             ALLOW IN    Anywhere (v6)             
+20022/tcp (v6)             ALLOW IN    Anywhere (v6)             
+
+root@d6adc3ed90a9:/# ss -tulnp | grep sshd
+tcp   LISTEN 0      128          0.0.0.0:20022      0.0.0.0:*    users:(("sshd",pid=37,fd=3))
+tcp   LISTEN 0      128             [::]:20022         [::]:*    users:(("sshd",pid=37,fd=4))
+root@d6adc3ed90a9:/# service cron start
+ * Starting periodic command scheduler cron                                                                                   [ OK ] 
+root@d6adc3ed90a9:/# su - agent-app
+su: user agent-app does not exist or the user entry does not contain all the required fields
+root@d6adc3ed90a9:/# su -agent-app
+su: invalid option -- 'a'
+Try 'su --help' for more information.
+root@d6adc3ed90a9:/# su -agent-admin                                 
+su: invalid option -- 'a'
+Try 'su --help' for more information.
+root@d6adc3ed90a9:/# su - agent-admin
+agent-admin@d6adc3ed90a9:~$ $AGENT_HOME/agent-app
+>>> Starting Agent Boot Sequence...
+[1/5] Checking User Account               [OK]
+   ... Running as service user 'agent-admin' (uid=1000)
+[2/5] Verifying Environment Variables     [OK]
+   ... All required Envs correct
+[3/5] Checking Required Files             [OK]
+   ... Verified 'secret.key' with correct key string.
+[4/5] Checking Port Availability          [OK]
+   ... Port 15034 is available.
+[5/5] Verifying Log Permission            [OK]
+   ... Log directory is writable: /var/log/agent-app
+------------------------------------------------------------
+All Boot Checks Passed!
+Agent READY
+2026-05-28 09:19:15,941 [INFO] [SafetyGuard] Process priority lowered (nice=10).
+2026-05-28 09:19:15,941 [INFO] Agent listening at port 15034
+2026-05-28 09:19:15,941 [INFO] === Agent Worker Started ===
+2026-05-28 09:19:15,941 [INFO]    > Cycle: 0 -> 256MB/Lv10 -> 0
+2026-05-28 09:19:15,941 [INFO] --- Step Info: Mode=UP, CPU Lv=1, Mem=0MB ---
+2026-05-28 09:19:15,978 [INFO] [Memory] Increasing... (+25 MB) Total: 25 MB
+2026-05-28 09:19:15,978 [INFO] [CPU] Occupy core for 1s (Level 1)
+2026-05-28 09:19:17,985 [INFO] --- Step Info: Mode=UP, CPU Lv=2, Mem=25MB ---
+2026-05-28 09:19:18,025 [INFO] [Memory] Increasing... (+25 MB) Total: 50 MB
+2026-05-28 09:19:18,025 [INFO] [CPU] Occupy core for 2s (Level 2)
+2026-05-28 09:19:21,034 [INFO] --- Step Info: Mode=UP, CPU Lv=3, Mem=50MB ---
+2026-05-28 09:19:21,074 [INFO] [Memory] Increasing... (+25 MB) Total: 75 MB
+2026-05-28 09:19:21,074 [INFO] [CPU] Occupy core for 3s (Level 3)
+^C2026-05-28 09:19:23,611 [INFO] === Agent Shutdown. Releasing resources. ===
+2026-05-28 09:19:23,613 [INFO] User interrupted process. Shutting down gracefully...
+agent-admin@d6adc3ed90a9:~$ nohup $AGENT_HOME/agent-app & 
+[1] 279
+agent-admin@d6adc3ed90a9:~$ nohup: ignoring input and appending output to 'nohup.out'
+
+agent-admin@d6adc3ed90a9:~$ #
+agent-admin@d6adc3ed90a9:~$ ls -l /var/log/agent-app
+total 476
+-rw-rw-r-- 1 agent-admin agent-admin 472996 May 28 11:54 agent_app.log
+-rw-rw-r-- 1 agent-admin agent-admin   9647 May 28 11:54 monitor.log
+
+
+
+
+네, 정확하게 파악하셨습니다! 방금 짚어주신 두 가지가 이번 B1-1 미션의 대미를 장식할 **진짜 실무형 보너스 과제**입니다.
+
+단순히 시스템이 잘 돌아가는지 확인하는 것을 넘어, **"쌓인 데이터를 어떻게 분석할 것인가(report.sh)"**와 **"디스크 용량이 가득 차지 않게 어떻게 자동 관리할 것인가(archive.sh)"**를 고민하는 것은 실제 인프라 엔지니어들의 핵심 업무입니다.
+
+본격적인 스크립트 작성에 앞서, 다른 동료 학습자들도 지적했던 **미션 가이드의 오타 하나를 먼저 교정**하고 가겠습니다. 
+* 가이드에서는 아카이브 경로를 `/var/log/monitor/agent-app/archive/`라고 안내하고 있지만, 앞서 우리가 만든 로그 폴더는 `/var/log/agent-app/`이므로 아카이브 경로 역시 **`/var/log/agent-app/archive/`**로 맞추어 구현하는 것이 올바른 디렉토리 구조입니다.
+
+현재 `v5` 이미지를 불러와 환경이 완벽하게 준비되어 있으니, 바로 두 스크립트를 구현해 보겠습니다. 터미널에서 `su - root`를 통해 **최고 관리자(root) 계정**으로 전환한 뒤 아래 내용을 순서대로 진행해 주세요!
+
+---
+
+### 🎁 보너스 1: 통계 리포트 생성 (`report.sh`)
+이 스크립트는 `awk` 명령어를 사용하여 `monitor.log`에 찍힌 수많은 텍스트에서 숫자만 추출해 평균, 최대, 최소값을 계산해 줍니다.
+
+**1. 스크립트 파일 생성 및 작성**
+```bash
+nano /home/agent-admin/agent-app/bin/report.sh
+```
+에디터가 열리면 아래 코드를 복사해서 붙여넣고 저장(`Ctrl+O` -> `Enter` -> `Ctrl+X`)합니다.
+
+```bash
+#!/bin/bash
+LOG_FILE="/var/log/agent-app/monitor.log"
+
+# 예외 처리: 로그 파일이 없는 경우
+if [ ! -f "$LOG_FILE" ]; then
+    echo "[ERROR] 분석할 로그 파일이 없습니다: $LOG_FILE"
+    exit 1
+fi
+
+echo "====== STATISTICS REPORT ======"
+# awk를 이용한 텍스트 데이터 파싱 및 통계 계산
+awk '
+/PID:/ {
+    # 문자열에서 % 기호와 불필요한 텍스트 제거 후 변수 할당
+    cpu = $4; sub("CPU:", "", cpu); sub("%", "", cpu);
+    mem = $5; sub("MEM:", "", mem); sub("%", "", mem);
+    disk = $6; sub("DISK_USED:", "", disk); sub("%", "", disk);
+
+    cpu_sum += cpu; mem_sum += mem; disk_sum += disk;
+    count++;
+
+    # 최대/최소값 초기화 및 갱신
+    if (count == 1) {
+        cpu_max = cpu; cpu_min = cpu;
+        mem_max = mem; mem_min = mem;
+        disk_max = disk; disk_min = disk;
+    } else {
+        if (cpu > cpu_max) cpu_max = cpu;
+        if (cpu < cpu_min) cpu_min = cpu;
+        if (mem > mem_max) mem_max = mem;
+        if (mem < mem_min) mem_min = mem;
+        if (disk > disk_max) disk_max = disk;
+        if (disk < disk_min) disk_min = disk;
+    }
+}
+END {
+    if (count > 0) {
+        printf "[CPU] Average : %.1f%%, Maximum : %.1f%%, Minimum : %.1f%%\n", cpu_sum/count, cpu_max, cpu_min
+        printf "[Memory] Average : %.1f%%, Maximum : %.1f%%, Minimum : %.1f%%\n", mem_sum/count, mem_max, mem_min
+        printf "[Disk] Average : %.1f%%, Maximum : %.1f%%, Minimum : %.1f%%\n", disk_sum/count, disk_max, disk_min
+        printf "[Samples] Data Points: %d samples\n", count
+    } else {
+        print "로그 데이터가 충분하지 않습니다."
+    }
+}' "$LOG_FILE"
+```
+
+---
+
+### 🎁 보너스 2: 시간 기반 로그 보존 정책 (`archive.sh`)
+오래된 로그를 압축하여 용량을 아끼고, 30일이 지나면 영구 삭제하는 백업 자동화 스크립트입니다. 권장 사항인 '예외 처리' 로직까지 완벽하게 포함시켰습니다.
+
+**1. 스크립트 파일 생성 및 작성**
+```bash
+nano /home/agent-admin/agent-app/bin/archive.sh
+```
+아래 코드를 복사해서 붙여넣고 저장합니다.
+
+```bash
+#!/bin/bash
+LOG_DIR="/var/log/agent-app"
+ARCHIVE_DIR="$LOG_DIR/archive"
+
+echo "====== LOG RETENTION POLICY EXECUTION ======"
+
+# 1. 예외 처리: 로그 디렉토리가 없거나 권한이 부족한 경우
+if [ ! -d "$LOG_DIR" ] || [ ! -w "$LOG_DIR" ]; then
+    echo "[ERROR] 로그 디렉토리가 없거나 쓰기 권한이 부족합니다: $LOG_DIR"
+    exit 1
+fi
+
+# 아카이브 폴더가 없으면 생성
+mkdir -p "$ARCHIVE_DIR"
+
+# 2. 7일 경과 로그 압축 및 아카이브 이동
+# find -mtime +7: 수정한지 7일이 넘은 파일 검색
+TARGET_LOGS=$(find "$LOG_DIR" -maxdepth 1 -name "*.log*" -type f -mtime +7)
+
+if [ -n "$TARGET_LOGS" ]; then
+    for file in $TARGET_LOGS; do
+        gzip "$file"
+        mv "$file.gz" "$ARCHIVE_DIR/"
+        echo "[INFO] 7일 경과 로그 압축 및 보관 완료: $file.gz"
+    done
+else
+    echo "[INFO] 압축할 7일 이상 경과 로그 파일이 없습니다."
+fi
+
+# 3. 30일 경과 아카이브 완전 삭제
+TARGET_ARCHIVES=$(find "$ARCHIVE_DIR" -name "*.gz" -type f -mtime +30)
+
+if [ -n "$TARGET_ARCHIVES" ]; then
+    for file in $TARGET_ARCHIVES; do
+        rm "$file"
+        echo "[INFO] 30일 경과 아카이브 영구 삭제 완료: $file"
+    done
+else
+    echo "[INFO] 삭제할 30일 이상 경과 아카이브 파일이 없습니다."
+fi
+```
+
+---
+
+### 🛡️ 권한 설정 및 마무리 (중요)
+보안 규격에 맞게 새로 만든 두 스크립트의 소유자와 권한을 변경합니다. 현재 계속 `root` 계정에서 실행 중이어야 합니다.
+
+```bash
+chown agent-dev:agent-core /home/agent-admin/agent-app/bin/report.sh
+chown agent-dev:agent-core /home/agent-admin/agent-app/bin/archive.sh
+chmod 750 /home/agent-admin/agent-app/bin/report.sh
+chmod 750 /home/agent-admin/agent-app/bin/archive.sh
+```
+
+**✅ 최종 실행 확인**
+이제 모든 준비가 끝났습니다! `agent-admin` 계정으로 잠시 전환하여 리포트가 예쁘게 출력되는지 확인해 보세요.
+```bash
+su - agent-admin
+/home/agent-admin/agent-app/bin/report.sh
+/home/agent-admin/agent-app/bin/archive.sh
+```
+
+화면에 평균/최대/최소 통계가 계산되어 출력된다면, 동료들이 구현한 수준을 훌쩍 뛰어넘는 완벽한 보너스 과제를 달성하신 것입니다! 성공 여부를 알려주세요!
+
+[보너스 실행]
+agent-admin@d6adc3ed90a9:~$ su - root
+Password: 
+agent-admin@d6adc3ed90a9:~$ exit
+logout
+root@d6adc3ed90a9:/# nano /home/agent-admin/agent-app/bin/report.sh
+root@d6adc3ed90a9:/# nano /home/agent-admin/agent-app/bin/archive.sh
+root@d6adc3ed90a9:/# chown agent-dev:agent-core /home/agent-admin/agent-app/bin/report.sh
+root@d6adc3ed90a9:/# chown agent-dev:agent-core /home/agent-admin/agent-app/bin/archive.sh
+root@d6adc3ed90a9:/# chmod 750 /home/agent-admin/agent-app/bin/report.sh
+root@d6adc3ed90a9:/# chmod 750 /home/agent-admin/agent-app/bin/archive.sh
+root@d6adc3ed90a9:/# ls -la /home/agent-admin/agent-app/bin/
+total 12
+drwxr-x--- 1 agent-dev   agent-core   38 May 28 12:14 .
+drwxr-xr-x 1 agent-admin agent-core    6 May 26 13:33 ..
+-rwxr-x--- 1 agent-dev   agent-core 1308 May 28 12:14 archive.sh
+-rwxr-x--- 1 agent-dev   agent-core 2076 May 26 13:34 monitor.sh
+-rwxr-x--- 1 agent-dev   agent-core 1650 May 28 12:13 report.sh
+root@d6adc3ed90a9:/# su - agent-admin
+agent-admin@d6adc3ed90a9:~$ /home/agent-admin/agent-app/bin/report.sh
+====== STATISTICS REPORT ======
+[CPU] Average : 0.2%, Maximum : 6.7%, Minimum : 0.0%
+[Memory] Average : 3.5%, Maximum : 3.9%, Minimum : 2.0%
+[Disk] Average : 1.0%, Maximum : 1.0%, Minimum : 1.0%
+[Samples] Data Points: 186 samples
+agent-admin@d6adc3ed90a9:~$ /home/agent-admin/agent-app/bin/archive.sh
+====== LOG RETENTION POLICY EXECUTION ======
+[INFO] 압축할 7일 이상 경과 로그 파일이 없습니다.
+[INFO] 삭제할 30일 이상 경과 아카이브 파일이 없습니다.
+agent-admin@d6adc3ed90a9:~$ 
