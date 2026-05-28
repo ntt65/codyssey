@@ -1,15 +1,14 @@
-# 1. 요구사항 수행 내역서
-본 문서는 B1-1 시스템 관제 및 자동화 스크립트 개발 미션의 완전한 구현 과정을 기록한 내역서입니다.
+# 1.  **요구사항 수행 내역서 (문서 1개)**
 
-## 2. WSL2 기반 도커 인프라 구축
+## 0. WSL2 기반 도커 인프라 구축 및 실행 가이드
 본격적인 미션 수행에 앞서, 지금까지 WSL2 환경에 도커(Docker)를 설치하고 권한 문제를 해결하여 실행하기까지의 과정을 깔끔하게 정리해 드리겠습니다.
 
-### 2.1. 도커 엔진 설치 (Docker Engine Only)
+### 0.1. 도커 엔진 설치 (Docker Engine Only)
 Docker Desktop을 사용하지 않고 WSL2 내부에서 직접 도커 엔진만 설치하는 방식을 선택했습니다 [1].
 명령어: sudo apt update &amp;&amp; sudo apt install -y docker.io
 이유: 리소스(CPU/메모리) 절약 및 실무적인 터미널 환경 구축을 위함입니다 [1, 2].
 
-### 2.2. 권한 설정 및 세션 초기화
+### 0.2. 권한 설정 및 세션 초기화
 설치 직후 발생한 permission denied 오류를 해결하기 위해 사용자 계정에 권한을 부여하고 이를 시스템에 반영했습니다 [1].
 
 * 그룹 추가: sudo usermod -aG docker $USER 명령어로 현재 사용자를 docker 그룹에 포함시켰습니다 [1].
@@ -18,7 +17,7 @@ Docker Desktop을 사용하지 않고 WSL2 내부에서 직접 도커 엔진만 
 
 * 서비스 시작: sudo service docker start를 통해 도커 엔진을 구동시켰습니다 [1].
 
-### 2.3. 미션용 컨테이너 실행 조건 (중요)
+### 0.3. 미션용 컨테이너 실행 조건 (중요)
 이제 미션을 위해 ubuntu:22.04 이미지를 실행할 때 반드시 포함해야 할 핵심 옵션들입니다 [2, 3].
 
 * --privileged (특권 모드): 컨테이너 내부에서 SSH 설정 변경 및 방화벽(UFW) 활성화와 같은 핵심 커널 기능을 제어하기 위해 반드시 필요합니다 [4, 5].
@@ -31,7 +30,14 @@ Docker Desktop을 사용하지 않고 WSL2 내부에서 직접 도커 엔진만 
 docker run -it --privileged -p 20022:20022 --name mission-box ubuntu:22.04 /bin/bash  
 ```
 
-### 2.4. Docker 설치 확인 및 ubuntu:22.04 실행
+### 0.4. Docker 설치 확인
+
+```bash
+user@4CAT1:~$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+### 0.4. Docker 실행 : ubuntu:22.04
 
 ```bash
 user@4CAT1:~$ docker run -it --privileged -p 20022:20022 --name mission-box ubuntu:22.04 /bin/bash
@@ -43,16 +49,14 @@ Digest: sha256:962f6cadeae0ea6284001009daa4cc9a8c37e75d1f5191cf0eb83fe565b63dd7
 Status: Downloaded newer image for ubuntu:22.04
 ```
 
-### 2.5. 컨테이너 안에서 ssh 서비스 설치
+### 0.6. 컨테이너 안에서 ssh 서비스 설치
 
 ```bash
 root@41bc6dbe4c07:/# apt update && apt install -y openssh-server nano
 ```
 
-## 3. SSH 설정 및 포트 변경
-SSH 서비스를 구성하고 기본 포트 22를 보안 포트 20022로 변경하며, Root 원격 접속을 차단합니다.
-
-### 3.1. sshd_config 수정: Port 20022, Root 접속 차단
+## 1. sshd_config 변경하기
+### 1.1. Port 20022, rootlogin권한 설정
 
 ```bash
 root@41bc6dbe4c07:/# nano /etc/ssh/sshd_config
@@ -60,12 +64,16 @@ Port 20022
 PermitRootLogin no
 ```
 
-### 3.2. SSH 서비스 시작 및 확인
+### 1.2. SSH 서비스 시작
 
 ```bash
 root@41bc6dbe4c07:/# service ssh start
  * Starting OpenBSD Secure Shell server sshd
+```
 
+### 1.3. SSH 서비스 확인
+
+```bash
 root@41bc6dbe4c07:/# service ssh status
  * sshd is running
 root@41bc6dbe4c07:/# apt install -y iproute2
@@ -74,15 +82,15 @@ tcp   LISTEN 0      128          0.0.0.0:20022      0.0.0.0:*    users:(("sshd",
 tcp   LISTEN 0      128             [::]:20022         [::]:*    users:(("sshd",pid=3972,fd=4))
 ```
 
-### 3.3. SSH 설정 재시작 (참조)
+### 1.3.1  참조 : 변경된 설정을 적용하기 위해 재시작  
 
 ```bash
 service ssh restart
 ```
-## 4. 방화벽(UFW) 활성화 및 포트 허용
-SSH 포트를 변경했으니, 이제 방화벽으로 보안을 강화합니다. TCP 20022(SSH)와 TCP 15034(APP) 포트만 허용하는 정책을 구현합니다.
-
-### 4.1. 기본 정책 설정: 역할 기반 접근 제어
+## 2. 방화벽(UFW) 활성화 및 포트 허용
+SSH라는 '문'을 바꿨으니, 이제 그 문을 지킬 '보안 요원'을 배치해야 합니다. 소스에 따르면 **TCP 20022(SSH)**와 TCP 15034(APP) 포트만 허용하는 것이 핵심입니다
+.
+### 2-1. 기본 정책 설정: 들어오는 모든 연결은 차단하고, 나가는 연결은 허용합니다.
 
 * ufw default deny incoming
 * ufw default allow outgoing
@@ -98,7 +106,7 @@ Default outgoing policy changed to 'allow'
 (be sure to update your rules accordingly)
 ```
 
-### 4.2. 필수 포트 허용
+### 2-2. 필수 포트 허용: 미션에서 요구한 두 포트만 엽니다.
 
 * ufw allow 20022/tcp
 * ufw allow 15034/tcp
@@ -114,7 +122,7 @@ Rule added
 Rule added (v6)
 ```
 
-### 4.3. 방화벽 활성화
+### 2-3. 방화벽 활성화: 설정 완료 후 방화벽을 켭니다 (질문에 y 입력).
 
 ufw enable
 
@@ -123,7 +131,7 @@ root@41bc6dbe4c07:/# ufw enable
 Firewall is active and enabled on system startup
 ```
 
-### 4.4. 방화벽 상태 확인
+### 2-4. 확인: ufw status verbose 명령어로 20022와 15034 포트가 ALLOW 상태인지 확인합니다.
 
 ```bash
 root@41bc6dbe4c07:/# ufw status verbose
@@ -140,7 +148,7 @@ To                         Action      From
 20022/tcp (v6)             ALLOW IN    Anywhere (v6)
 ```
 
-### 4.5. 방화벽 설정 검증
+### 2-4-1. 현재 상태 분석 및 성공 확인**
 출력된 `ufw status verbose` 결과는 미션 요구사항을 정확히 충족하고 있습니다.
 *   **방화벽 활성화:** `Status: active`로 보안 요원이 정상 근무 중입니다.
 *   **기본 정책 적용:** `Default: deny (incoming)`를 통해 허용되지 않은 모든 외부 접속을 차단하는 보안 원칙을 수립했습니다.
@@ -150,20 +158,30 @@ To                         Action      From
 
 ---
 
-## 5. 역할 기반 권한 관리(RBAC) 및 디렉토리 보안
-ACL(Access Control List)을 활용하여 협업 환경에서도 보안 정책이 자동으로 유지되도록 설정합니다.
+## 3. 역할 기반 권한 관리(RBAC) 및 디렉토리 보안 설정
+ACL(Access Control List)이란 **`chmod`만으로는 해결할 수 없는 현실적인 협업 문제**를 해결하기 위해 도입된 아주 강력한 도구입니다.
 
-### 5.1. 핵심 개념
-- **`chmod`의 한계:** 소유자/그룹/기타 3개 계층만 지원하므로, 여러 그룹의 세밀한 권한 관리 불가능
-- **ACL의 역할:** 특정 사용자나 그룹을 위해 무한정 권한 칸 추가 가능
-- **Default ACL (`-d`):** 폴더에 생성되는 모든 파일이 자동으로 상속할 권한을 미리 설정
+### **1. `chmod`의 한계: 딱 3칸뿐인 권한 슬롯**
+리눅스의 전통적인 권한(`chmod`)은 **소유자(Owner) / 그룹(Group) / 기타(Others)**라는 딱 3개의 계층으로만 구성됩니다.
+*   **문제 발생:** 만약 특정 디렉토리에 대해 "A 그룹도 읽고 써야 하고, B 그룹도 읽어야 하는데, 나머지는 절대 못 보게 하고 싶다"라고 한다면 `chmod`로는 불가능합니다. 그룹은 하나만 지정할 수 있기 때문입니다.
+*   **ACL의 해결:** ACL은 기존 3개 계층 외에 **"특정 사용자나 특정 그룹"을 위한 권한 칸을 무한정 추가**할 수 있게 해줍니다.
 
----
+### **2. 이번 미션의 핵심: "미래를 위한 자동화" (`setfacl -d`)**
+사용자님을 가장 헷갈리게 했던 `-d` (Default ACL) 옵션이야말로 ACL을 쓰는 진정한 이유입니다.
+*   **협업의 난제:** `chmod`만 쓰면 `agent-admin`이 만든 파일은 기본적으로 다른 사람은 못 고치는 상태로 생성됩니다. 그럼 운영자가 매번 쫓아가서 `chmod`를 다시 해줘야 합니다.
+*   **ACL의 마법:** `setfacl -d`를 설정해 두면, "이 폴더에 앞으로 생길 모든 파일은 **누가 만들든 상관없이** 특정 그룹에게 권한을 줘라"라는 **설계 도면**을 미리 박아두는 것입니다. 덕분에 운영자가 일일이 신경 쓰지 않아도 협업 환경이 안전하게 유지됩니다.
 
-## 6. 애플리케이션 실행 환경 구성
-이제 인프라 보안의 기초가 완성되었습니다. 실제 애플리케이션을 구동할 운영 환경을 설정합니다.
+### **3. 복잡함을 줄이는 마인드셋**
+실무에서도 모든 폴더에 ACL을 도배하지는 않습니다. 다음의 흐름으로 생각하면 마음이 편해집니다.
+1.  **기본은 `chmod/chown`:** 소유자와 기본 그룹을 정해 큰 틀을 잡습니다.
+2.  **예외와 자동화는 `ACL`:** 여러 그룹이 섞이거나(협업), 파일 생성 시 권한을 자동 상속시키고 싶을 때만 ACL이라는 '정교한 칼'을 꺼내 드는 것입니다.
 
-### 6.1. 계정 및 그룹 설계
+이번 미션에서 **`upload_files`**에 ACL을 적용한 것은 단순히 명령어를 외우는 연습이 아니라, **"운영자가 개입하지 않아도 시스템이 스스로 보안 정책을 유지하게 만드는 법"**을 배우신 것입니다.
+
+이제 인프라 보안과 권한 설정의 가장 어려운 고비를 넘기셨습니다! 이 정교한 권한 체계 위에서 실제 앱을 구동해보는 **[Step 4] 애플리케이션 실행 환경 구성** 단계로 넘어가 보시겠어요?
+기본 보안과 네트워크 설정후, 이제 실제 데이터가 저장될 **디렉토리를 생성하고 그룹별로 접근 권한**을 정교하게 설정
+
+1. 생성해야 할 계정 및 그룹 목록
 미션 요구사항에 따라 총 3개의 계정과 2개의 그룹을 생성해야 합니다
 .
 2. 계정:
@@ -179,20 +197,20 @@ ACL(Access Control List)을 활용하여 협업 환경에서도 보안 정책이
 그룹이 존재하지 않으면 권한 부여 시 에러가 발생하므로, 반드시 **그룹을 먼저 만들고 계정을 생성**해야 합니다.
 
 ```bash
-#### 6.1.1. 그룹 생성
+#### **3.1.1. 그룹 생성
 root@981ebdb4319e:/# groupadd agent-common
 root@981ebdb4319e:/# groupadd agent-core
 root@981ebdb4319e:/# cat /etc/group | grep 'agent-'
 agent-common:x:1000:
 agent-core:x:1001:
 
-#### 6.1.2. 계정 생성 및 그룹 배정
+#### 3.1.2. 계정 생성 및 그룹 배정 (한 번에 처리)
 # agent-common은 모두 포함, agent-core는 admin/dev만 포함
 root@981ebdb4319e:/# useradd -m -s /bin/bash -G agent-common,agent-core agent-admin
 root@981ebdb4319e:/# useradd -m -s /bin/bash -G agent-common,agent-core agent-dev
 root@981ebdb4319e:/# useradd -m -s /bin/bash -G agent-common agent-test
 ```
-*   **보안 원칙:** `agent-test` 계정은 핵심 보안 그룹인 `agent-core`에서 제외하여 격리합니다.
+*   **보안 원칙:** `agent-test` 계정은 핵심 보안 그룹인 `agent-core`에서 제외하여 철저히 격리합니다.
 
 ```bash
 root@981ebdb4319e:/# cat /etc/group | grep 'agent'
@@ -208,7 +226,7 @@ agent-dev:x:1001:1003::/home/agent-dev:/bin/bash
 agent-test:x:1002:1004::/home/agent-test:/bin/bash
 ```
 
-### 6.2. 디렉토리 생성 및 권한 설정
+#### 3.2. 미션용 디렉토리 생성**
 애플리케이션 홈 디렉토리(`AGENT_HOME`)를 기준으로 필요한 upload_files, api_keys, agent-app, 자식 폴더를 만듭니다.
 
 ```bash
