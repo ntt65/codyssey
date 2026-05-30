@@ -429,23 +429,70 @@ agent-admin@container:~$ cat /var/log/agent-app/monitor.log
 [2026-05-26 13:51:02] PID:455 CPU:0% MEM:2.8% DISK_USED:1%
 [2026-05-26 13:52:01] PID:455 CPU:0% MEM:3.2% DISK_USED:1%
 ```
+### 7.4. 계정 패스워드 설정 및 외부 SSH 접속 검증
+
+보안 설정 상 외부에서 SSH(포트 `20022`)로 접속하거나 컨테이너 내부에서 사용자 전환(`su`)을 수행하려면 각 계정의 패스워드 설정이 필수적입니다.
+
+#### 7.4.1. 계정별 패스워드 설정 방식
+컨테이너 생성 초기에는 `root` 및 일반 계정(`agent-*`)들의 패스워드가 지정되지 않았거나 잠겨있는 상태(`!`, `*`)이므로 아래 방식을 통해 패스워드를 지정합니다.
+
+*   **방법 1: 대화형 설정 (passwd 명령어)**
+    ```bash
+    # root 권한에서 특정 유저 비밀번호 설정
+    passwd agent-admin
+    # (새로운 비밀번호 2회 입력)
+    ```
+
+*   **방법 2: 비대화형 설정 (chpasswd 명령어 - 자동화에 유리)**
+    ```bash
+    echo "agent-admin:원하는비밀번호" | chpasswd
+    ```
+
+#### 7.4.2. SSH 외부 접속 대상 제어 설정 (sshd_config)
+기본적으로 SSH 설정 파일(`/etc/ssh/sshd_config`)에는 `PermitRootLogin no`가 적용되어 최고 권한 계정인 `root`로의 외부 직접 로그인은 차단되어 있습니다.
+만약 특정 일반 사용자 계정(예: `agent-admin`)으로만 외부 SSH 접속을 완전히 격리하고 싶다면 다음과 같이 설정할 수 있습니다.
+
+```bash
+# /etc/ssh/sshd_config 파일 편집
+nano /etc/ssh/sshd_config
+
+# 파일 최하단에 특정 허용 유저 명시 추가
+AllowUsers agent-admin
+
+# SSH 서비스 재시작하여 적용
+service ssh restart
+```
+
+#### 7.4.3. 호스트 PC(macOS)에서의 SSH 접속 테스트
+호스트 환경인 iMac 터미널에서 포트 포워딩 경로(`20022` 포트)를 통해 컨테이너의 `agent-admin` 계정으로 접속을 검증합니다.
+
+```bash
+# 호스트 PC 터미널에서 실행
+ssh agent-admin@localhost -p 20022
+
+# 최초 접속 시 신뢰 확인 안내에 'yes' 입력 후 패스워드 입력 진행
+# (접속 성공 화면)
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 6.17.8-orbstack-00308-g8f9c941121b1 x86_64)
+agent-admin@981c5cada840:~$ 
+```
 
 ---
 
 ## 8. 보너스 과제: 로그 분석 및 보존 정책
 
-실무 인프라 관리에서 필수적인 로그 통계 분석과 자동 보관 정책을 구현합니다.
+실무 인프라 관리 환경에서 필수적인 로그 데이터의 통계 분석 및 자동 보존/정리 정책을 수립하고 자동화 스크립트를 작성하여 적용합니다.
 
 ### 8.1. 보너스 1: 통계 리포트 생성 (report.sh)
 
-#### 8.1.1. 스크립트 작성
+`monitor.log` 파일을 분석하여 수집된 리소스 데이터(CPU, Memory, Disk)의 평균값, 최대치, 최소치를 계산하고 분석된 총 데이터 샘플 수를 정렬하여 출력합니다.
 
+#### 8.1.1. 스크립트 작성 (`report.sh`)
 ```bash
-root@container:/# nano /home/agent-admin/agent-app/bin/report.sh
+# bin 디렉토리에 스크립트 파일 생성
+nano /home/agent-admin/agent-app/bin/report.sh
 ```
 
-#### 8.1.2. report.sh 내용
-
+**스크립트 소스코드:**
 ```bash
 #!/bin/bash
 LOG_FILE="/var/log/agent-app/monitor.log"
@@ -494,8 +541,7 @@ END {
 }' "$LOG_FILE"
 ```
 
-#### 8.1.3. 실행 결과
-
+#### 8.1.2. 리포트 실행 결과 확인
 ```bash
 agent-admin@container:~$ /home/agent-admin/agent-app/bin/report.sh
 ====== STATISTICS REPORT ======
@@ -505,16 +551,18 @@ agent-admin@container:~$ /home/agent-admin/agent-app/bin/report.sh
 [Samples] Data Points: 186 samples
 ```
 
+---
+
 ### 8.2. 보너스 2: 로그 보존 정책 (archive.sh)
 
-#### 8.2.1. 스크립트 작성
+디스크 고갈 방지를 위해 7일이 경과한 기존 구버전 로그 파일(`monitor.log.*`)을 압축(`gzip`)하여 별도의 아카이브 폴더로 이동시키고, 30일이 경과한 아카이브 압축 파일은 자동으로 영구 삭제하도록 설정합니다.
 
+#### 8.2.1. 스크립트 작성 (`archive.sh`)
 ```bash
-root@container:/# nano /home/agent-admin/agent-app/bin/archive.sh
+nano /home/agent-admin/agent-app/bin/archive.sh
 ```
 
-#### 8.2.2. archive.sh 내용
-
+**스크립트 소스코드:**
 ```bash
 #!/bin/bash
 LOG_DIR="/var/log/agent-app"
@@ -522,7 +570,7 @@ ARCHIVE_DIR="$LOG_DIR/archive"
 
 echo "====== LOG RETENTION POLICY EXECUTION ======"
 
-# 1. 예외 처리: 로그 디렉토리가 없거나 권한이 부족한 경우
+# 1. 예외 처리: 로그 디렉토리가 없거나 쓰기 권한이 부족한 경우
 if [ ! -d "$LOG_DIR" ] || [ ! -w "$LOG_DIR" ]; then
     echo "[ERROR] 로그 디렉토리가 없거나 쓰기 권한이 부족합니다: $LOG_DIR"
     exit 1
@@ -532,7 +580,6 @@ fi
 mkdir -p "$ARCHIVE_DIR"
 
 # 2. 7일 경과 로그 압축 및 아카이브 이동
-# find -mtime +7: 수정한지 7일이 넘은 파일 검색
 TARGET_LOGS=$(find "$LOG_DIR" -maxdepth 1 -name "*.log*" -type f -mtime +7)
 
 if [ -n "$TARGET_LOGS" ]; then
@@ -558,15 +605,17 @@ else
 fi
 ```
 
-#### 8.2.3. 권한 설정 및 실행
+#### 8.2.2. 스크립트 소유권 및 실행 권한 보안 설정
+비밀번호 보안 규격에 맞게 두 스크립트(`report.sh`, `archive.sh`)의 소유권을 `agent-dev:agent-core`로 부여하고, 권한을 `750`으로 조절하여 개발자는 수정 가능하고 운영자는 실행/읽기만 가능하도록 조치합니다.
 
 ```bash
+# root 권한에서 소유자 및 권한 설정 변경
 root@container:/# chown agent-dev:agent-core /home/agent-admin/agent-app/bin/report.sh
 root@container:/# chown agent-dev:agent-core /home/agent-admin/agent-app/bin/archive.sh
 root@container:/# chmod 750 /home/agent-admin/agent-app/bin/report.sh
 root@container:/# chmod 750 /home/agent-admin/agent-app/bin/archive.sh
 
-# 최종 확인
+# 설정 내용 확인
 root@container:/# ls -la /home/agent-admin/agent-app/bin/
 total 12
 drwxr-x--- 1 agent-dev   agent-core   38 May 28 12:14 .
@@ -576,8 +625,18 @@ drwxr-xr-x 1 agent-admin agent-core    6 May 26 13:33 ..
 -rwxr-x--- 1 agent-dev   agent-core 1650 May 28 12:13 report.sh
 ```
 
-#### 8.2.4. 보너스 스크립트 실행 결과
+#### 8.2.3. Cron 스케줄러를 통한 자동 실행 등록 (매일 자정)
+로그 보존 정책이 매일 자정에 스스로 작동하도록 운영자(`agent-admin`) 계정의 크론탭 스케줄러에 등록합니다.
 
+```bash
+# agent-admin 계정으로 전환하여 크론탭 편집 실행
+agent-admin@container:~$ crontab -e
+
+# 매일 자정(0시 0분)에 archive.sh를 구동하도록 최하단에 아래 구문 추가
+0 0 * * * /home/agent-admin/agent-app/bin/archive.sh
+```
+
+#### 8.2.4. 보존 정책 스크립트 수동 실행 테스트
 ```bash
 agent-admin@container:~$ /home/agent-admin/agent-app/bin/archive.sh
 ====== LOG RETENTION POLICY EXECUTION ======
