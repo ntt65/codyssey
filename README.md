@@ -75,6 +75,7 @@ root@container:/# service ssh start
 
 # SSH 상태 확인
 root@container:/# service ssh status
+ * sshd is running
 
 # iproute2 설치 (ss 명령어 사용)
 root@container:/# apt install -y iproute2
