@@ -1,0 +1,11 @@
+OrbStack info:
+  Version: 2.0.5
+  Commit: cfe47627f138ffd822c958553b0a93eaf2692c71 (v2.0.5)
+
+System info:
+  macOS: 15.7.4 (24G517)
+  CPU: amd64, 12 cores
+  CPU model: Intel(R) Core(TM) i5-10600 CPU @ 3.30GHz
+  Model: iMac20,1
+  Memory: 32 GiB
+
