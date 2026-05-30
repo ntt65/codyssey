@@ -142,7 +142,7 @@ root@d6adc3ed90a9:/#
 #### 1. 이미지 다운로드 및 컨테이너 실행
 평가자의 PC(또는 복구 환경)에서 아래 명령어 한 줄을 입력하면, 도커 허브에서 `v6` 이미지를 자동으로 내려받고 시스템 커널 제어 권한과 포트 포워딩 옵션이 적용된 상태로 컨테이너가 실행됩니다.
 ```bash
-docker run -it --privileged -p 20022:20022 -p 15034:15034 --name mission-eval ntt65/my-linux-mission:v6 /bin/bash
+docker run -it --privileged -p 20022:20022 -p 15034:15034 --name mission-eval ntt65/my-linux-mission:v7 /bin/bash
 ```
 
 #### 2. 필수 서비스 활성화 (root 계정)
@@ -153,7 +153,7 @@ service ssh start
 
 # 2. 방화벽(UFW) 활성화 (20022, 15034 허용)
 ufw enable
-
+s
 # 3. 크론(cron) 스케줄러 시작 (monitor.sh 자동 실행 목적)
 service cron start
 ```
