@@ -441,6 +441,7 @@ agent-admin@container:~$ cat /var/log/agent-app/monitor.log
     # root 권한에서 특정 유저 비밀번호 설정
     passwd agent-admin
     # (새로운 비밀번호 2회 입력)
+    1001
     ```
 
 *   **방법 2: 비대화형 설정 (chpasswd 명령어 - 자동화에 유리)**
