@@ -73,7 +73,7 @@ class DynamicCompleter:
         self.options = options
 
     def complete(self, text: str, state: int) -> Optional[str]:
-        # Perform case-insensitive prefix match
+        # Filter options starting with typed text (case-insensitive prefix match)
         matches = [opt for opt in self.options if opt.lower().startswith(text.lower())]
         if state < len(matches):
             return matches[state]
@@ -84,16 +84,22 @@ completer = DynamicCompleter()
 
 if readline:
     readline.set_completer(completer.complete)
-    # Enable tab completion and arrow keys mapping
+    # Enable standard tab completion (No cycling menu, normal completion list behavior)
     if 'libedit' in readline.__doc__:
         # macOS default editline configuration
-        readline.parse_and_bind("bind ^I rl_complete")
         readline.parse_and_bind("bind -e")
+        readline.parse_and_bind("bind ^I rl_complete")
     else:
-        # GNU Readline configuration: Tab cycles options, Up/Down arrow keys recall command history
-        readline.parse_and_bind("tab: menu-complete")
+        # GNU Readline configuration: standard tab completion
+        readline.parse_and_bind("tab: complete")
 
 # --- Formatting Helpers ---
+
+def format_choices(items: List[str]) -> str:
+    """Formats list of choices to (Item1 /Item2 /Item3 ) style."""
+    if not items:
+        return ""
+    return "(" + " /".join(items) + " )"
 
 def visual_len(s: str) -> int:
     """Calculates the visual width of a string (taking double-width East Asian characters into account)."""
@@ -302,10 +308,8 @@ class InteractiveShell:
     # --- Universal Prompt Helpers ---
 
     def prompt_validated_input(self, prompt_text: str, validator: Callable[[str], Tuple[bool, str, str]], default_value: Optional[str] = None, suggestions: Optional[List[str]] = None) -> str:
-        # Force switch IME to English
         switch_to_english()
         
-        # Load custom completer suggestions
         if suggestions:
             completer.set_options(suggestions)
         else:
@@ -329,11 +333,8 @@ class InteractiveShell:
         categories = self.service.list_categories()
         completer.set_options(categories)
         
-        prompt_display_cats = "///".join(categories[:5])
-        if len(categories) > 5:
-            prompt_display_cats += "///..."
-            
-        prompt_text = f"- 카테고리 ({prompt_display_cats})"
+        prompt_display = format_choices(categories)
+        prompt_text = f"- 카테고리 {prompt_display}"
         if current_val:
             prompt_text += f" [{current_val}]"
             
@@ -351,8 +352,8 @@ class InteractiveShell:
                 
             print(f"[오류] 존재하지 않는 카테고리입니다: '{val}'")
             print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
-            ans = input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까? (y/n): ").strip().lower()
-            if ans in ['y', 'yes', '예']:
+            ans = self.prompt_validated_input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까? (y /n )", validate_yes_no, None, ["y", "n"])
+            if ans.lower() in ['y', 'yes', '예']:
                 self.service.add_category(val)
                 print(f"[저장 완료] category={val}")
                 return val
@@ -388,14 +389,20 @@ class InteractiveShell:
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         categories = self.service.list_categories()
         
-        # Suggested dates (today), type options, and common items
-        date = self.prompt_validated_input(f"- 날짜 (YYYY-MM-DD) (/// {today_str})", validate_date, today_str, [today_str])
-        type_str = self.prompt_validated_input("- 타입 (income///expense)", validate_type, None, ["income", "expense"])
+        # Display standard options in (Item1 /Item2 /Item3 ) style
+        date_display = format_choices([today_str])
+        type_display = format_choices(["income", "expense"])
+        amount_display = format_choices(["10000", "30000", "50000"])
+        memo_display = format_choices(["점심", "저녁", "월세", "마트"])
+        tag_display = format_choices(["식대", "생필품", "고정비", "교통"])
+
+        date = self.prompt_validated_input(f"- 날짜 (YYYY-MM-DD) {date_display}", validate_date, today_str, [today_str])
+        type_str = self.prompt_validated_input(f"- 타입 {type_display}", validate_type, None, ["income", "expense"])
         category = self.prompt_category_interactive()
-        amount = int(self.prompt_validated_input("- 금액 (10000///30000///50000)", validate_amount, None, ["10000", "30000", "50000"]))
+        amount = int(self.prompt_validated_input(f"- 금액 {amount_display}", validate_amount, None, ["10000", "30000", "50000"]))
         
-        memo = self.prompt_validated_input("- 메모 (점심///저녁///월세///마트, 선택)", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
-        tags_input = self.prompt_validated_input("- 태그 (식대///생필품///고정비///교통, 선택)", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
+        memo = self.prompt_validated_input(f"- 메모 (선택) {memo_display}", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
+        tags_input = self.prompt_validated_input(f"- 태그 (선택) {tag_display}", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
         tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
         
         tx_id = self.service.add_transaction(date, type_str, category, amount, memo, tags)
@@ -433,10 +440,10 @@ class InteractiveShell:
         
         from_date = self.prompt_validated_input("- 검색 시작일 (YYYY-MM-DD)", lambda x: (True, "", "") if not x else validate_date(x), "")
         to_date = self.prompt_validated_input("- 검색 종료일 (YYYY-MM-DD)", lambda x: (True, "", "") if not x else validate_date(x), "")
-        type_str = self.prompt_validated_input("- 타입 필터 (income///expense)", lambda x: (True, "", "") if not x else validate_type(x), "", ["income", "expense"])
+        type_str = self.prompt_validated_input(f"- 타입 필터 {format_choices(['income', 'expense'])}", lambda x: (True, "", "") if not x else validate_type(x), "", ["income", "expense"])
         category = self.prompt_validated_input("- 카테고리 필터", lambda x: (True, "", "") if not x or x in categories else (False, f"존재하지 않는 카테고리: {x}", f"목록: {', '.join(categories)}"), "", categories)
         query = input("- 메모 검색어: ").strip()
-        tag = self.prompt_validated_input("- 태그 필터", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
+        tag = self.prompt_validated_input(f"- 태그 필터 {format_choices(['식대', '생필품', '고정비', '교통'])}", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
 
         txs = self.service.search_transactions(
             from_date=from_date if from_date else None,
@@ -505,7 +512,7 @@ class InteractiveShell:
     def handle_budget(self):
         this_month = datetime.date.today().strftime("%Y-%m")
         month = self.prompt_validated_input("- 예산을 책정할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
-        amount = int(self.prompt_validated_input("- 한도 금액 (0 이상 정수) (/// 500000///1000000)", validate_amount, None, ["500000", "1000000"]))
+        amount = int(self.prompt_validated_input(f"- 한도 금액 (0 이상 정수) {format_choices(['500000', '1000000'])}", validate_amount, None, ["500000", "1000000"]))
         
         self.service.set_budget(month, amount)
         print(f"[저장 완료] {month} 예산 {amount:,}원 설정 완료.")
@@ -517,7 +524,7 @@ class InteractiveShell:
         print("2. 신규 카테고리 추가")
         print("3. 기존 카테고리 삭제")
         
-        choice = self.prompt_validated_input("메뉴 선택 (1///2///3)", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
+        choice = self.prompt_validated_input(f"메뉴 선택 {format_choices(['1', '2', '3'])}", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
         if not choice:
             return
             
@@ -563,14 +570,12 @@ class InteractiveShell:
         print("\n[기존 데이터를 로드했습니다. 수정을 원하지 않는 항목은 그대로 엔터를 누르세요]")
         
         date = self.prompt_validated_input("- 날짜 (YYYY-MM-DD)", validate_date, target_tx.date, [target_tx.date])
-        type_str = self.prompt_validated_input("- 타입 (income///expense)", validate_type, target_tx.type, ["income", "expense"])
+        type_str = self.prompt_validated_input(f"- 타입 {format_choices(['income', 'expense'])}", validate_type, target_tx.type, ["income", "expense"])
         category = self.prompt_category_interactive(target_tx.category)
         amount = int(self.prompt_validated_input("- 금액 (양수)", validate_amount, str(target_tx.amount), [str(target_tx.amount)]))
         
-        memo = self.prompt_validated_input(f"- 메모 (선택) (/// {target_tx.memo})", lambda x: (True, "", ""), target_tx.memo, ["점심", "저녁", "월세", "마트"])
-        
-        curr_tags_str = ",".join(target_tx.tags) if target_tx.tags else ""
-        tags_input = self.prompt_validated_input(f"- 태그 (쉼표 구분) (/// {curr_tags_str})", lambda x: (True, "", ""), curr_tags_str, ["식대", "생필품", "고정비", "교통"])
+        memo = self.prompt_validated_input(f"- 메모 (선택) {format_choices(['점심', '저녁', '월세', '마트'])}", lambda x: (True, "", ""), target_tx.memo, ["점심", "저녁", "월세", "마트"])
+        tags_input = self.prompt_validated_input(f"- 태그 (쉼표 구분) {format_choices(['식대', '생필품', '고정비', '교통'])}", lambda x: (True, "", ""), ",".join(target_tx.tags) if target_tx.tags else "", ["식대", "생필품", "고정비", "교통"])
         
         tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
 
@@ -600,7 +605,7 @@ class InteractiveShell:
             print(f"[오류] 없는 데이터: ID가 '{tx_id}'인 거래를 찾을 수 없습니다.")
             return
 
-        ans = self.prompt_validated_input(f"⚠️ 정말로 거래 ID '{tx_id}'를 영구 삭제하시겠습니까? (y///n)", validate_yes_no, None, ["y", "n"])
+        ans = self.prompt_validated_input(f"⚠️ 정말로 거래 ID '{tx_id}'를 영구 삭제하시겠습니까? {format_choices(['y', 'n'])}", validate_yes_no, None, ["y", "n"])
         if ans.lower() in ['y', 'yes', '예']:
             success = self.service.delete_transaction(tx_id)
             if success:
@@ -632,7 +637,7 @@ class InteractiveShell:
                 print("[오류] 내보낼 CSV 파일 경로가 필요합니다.")
                 return
 
-        choice = self.prompt_validated_input("- 필터 방식 선택 (1: 특정 월, 2: 특정 기간 범위, 엔터: 전체)", lambda x: (True, "", "") if x in ["1", "2", ""] else (False, "1 또는 2 중 선택해 주세요.", ""), "", ["1", "2"])
+        choice = self.prompt_validated_input(f"- 필터 방식 선택 {format_choices(['1: 특정 월', '2: 특정 기간 범위', '엔터: 전체'])}", lambda x: (True, "", "") if x in ["1", "2", ""] else (False, "1 또는 2 중 선택해 주세요.", ""), "", ["1", "2"])
         
         month = None
         from_date = None
@@ -663,7 +668,7 @@ class InteractiveShell:
         print("3. 기존 반복 템플릿 삭제")
         print("4. 특정 월 반복 거래 일괄 생성")
         
-        choice = self.prompt_validated_input("선택 (1///2///3///4)", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
+        choice = self.prompt_validated_input(f"선택 {format_choices(['1', '2', '3', '4'])}", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
         if not choice:
             return
             
@@ -681,12 +686,12 @@ class InteractiveShell:
             
         elif choice == "2":
             print("[신규 반복 템플릿 등록]")
-            type_str = self.prompt_validated_input("- 타입 (income///expense)", validate_type, None, ["income", "expense"])
+            type_str = self.prompt_validated_input(f"- 타입 {format_choices(['income', 'expense'])}", validate_type, None, ["income", "expense"])
             category = self.prompt_category_interactive()
-            amount = int(self.prompt_validated_input("- 금액 (10000///30000///50000)", validate_amount, None, ["10000", "30000", "50000"]))
-            day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, None, ["25", "20", "10"]))
-            memo = self.prompt_validated_input("- 메모 (선택, 없으면 엔터)", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
-            tags_input = self.prompt_validated_input("- 태그 (선택, 없으면 엔터)", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
+            amount = int(self.prompt_validated_input(f"- 금액 {format_choices(['10000', '30000', '50000'])}", validate_amount, None, ["10000", "30000", "50000"]))
+            day = int(self.prompt_validated_input(f"- 매월 반복 일자 (1-31) {format_choices(['25', '20', '10'])}", validate_day, None, ["25", "20", "10"]))
+            memo = self.prompt_validated_input(f"- 메모 (선택) {format_choices(['월세', '보험금', '기본급'])}", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
+            tags_input = self.prompt_validated_input(f"- 태그 (선택) {format_choices(['고정비', '월세', '급여'])}", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
             tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
             
             new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)
