@@ -63,50 +63,153 @@ def switch_to_english():
     except Exception:
         return False
 
-# --- Auto-Complete (Readline) Class ---
+# --- Auto-Complete (Readline) for Command Prompt ---
 
-class DynamicCompleter:
-    def __init__(self):
-        self.options: List[str] = []
-
-    def set_options(self, options: List[str]):
-        self.options = options
+class CommandCompleter:
+    def __init__(self, commands: List[str]):
+        self.commands = commands
 
     def complete(self, text: str, state: int) -> Optional[str]:
-        # Filter options starting with typed text (case-insensitive prefix match)
-        matches = [opt for opt in self.options if opt.lower().startswith(text.lower())]
+        matches = [cmd for cmd in self.commands if cmd.lower().startswith(text.lower())]
         if state < len(matches):
             return matches[state]
         return None
 
-# Global completer instance
-completer = DynamicCompleter()
+# --- Raw Terminal Choice Prompt ---
 
-def enable_arrow_menu_completion():
-    """Configures readline to cycle autocomplete choices with Tab and Up/Down arrow keys during data entry."""
-    if readline:
-        if 'libedit' not in readline.__doc__:
-            readline.parse_and_bind("tab: menu-complete")
-            readline.parse_and_bind(r'"\e[A": menu-complete-backward')
-            readline.parse_and_bind(r'"\e[B": menu-complete')
+def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional[str] = None) -> str:
+    """
+    Prompts the user interactively with choices shown as (Item1 /Item2 /Item3 ).
+    Captures character-by-character input to:
+      1. Cycle through choices using Up/Down and Left/Right arrow keys in order.
+      2. Autocomplete first-letter matches using Tab.
+      3. Accept input via Enter.
+      4. Fallback to normal input if tty/termios is unavailable (e.g. testing).
+    """
+    switch_to_english()
+    
+    # If no choices, fallback to standard input
+    if not choices:
+        prompt_suffix = f" [{default_value}]: " if default_value else ": "
+        return input(prompt_text + prompt_suffix).strip()
 
-def restore_arrow_history():
-    """Restores standard GNU Readline behavior: Tab completes text, Up/Down arrow keys navigate command history."""
-    if readline:
-        if 'libedit' not in readline.__doc__:
-            readline.parse_and_bind("tab: complete")
-            readline.parse_and_bind(r'"\e[A": previous-history')
-            readline.parse_and_bind(r'"\e[B": next-history')
+    prompt_display = format_choices(choices)
+    full_prompt = f"{prompt_text} {prompt_display}"
+    if default_value:
+        full_prompt += f" [{default_value}]"
+    full_prompt += ": "
 
-if readline:
-    readline.set_completer(completer.complete)
-    if 'libedit' in readline.__doc__:
-        # macOS default editline configuration
-        readline.parse_and_bind("bind -e")
-        readline.parse_and_bind("bind ^I rl_complete")
-    else:
-        # GNU Readline configuration: start with command history mode active
-        restore_arrow_history()
+    # Verify if we can run in raw TTY mode
+    if not sys.stdin.isatty():
+        return input(full_prompt).strip()
+
+    import tty
+    import termios
+
+    sys.stdout.write(full_prompt)
+    sys.stdout.flush()
+
+    current_text = ""
+    current_index = -1
+
+    def getch() -> str:
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+    def get_key() -> str:
+        ch = getch()
+        if ch == '\x1b':
+            ch2 = getch()
+            if ch2 == '[':
+                ch3 = getch()
+                if ch3 == 'A': return 'up'
+                elif ch3 == 'B': return 'down'
+                elif ch3 == 'C': return 'right'
+                elif ch3 == 'D': return 'left'
+            return 'esc'
+        elif ch == '\t': return 'tab'
+        elif ch in ('\n', '\r'): return 'enter'
+        elif ch in ('\x7f', '\x08'): return 'backspace'
+        elif ch == '\x03': raise KeyboardInterrupt
+        return ch
+
+    def get_matches(text):
+        return [c for c in choices if c.lower().startswith(text.lower())]
+
+    while True:
+        key = get_key()
+        
+        if key == 'enter':
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            if not current_text and default_value:
+                return default_value
+            return current_text
+            
+        elif key == 'backspace':
+            current_text = current_text[:-1]
+            current_index = -1
+            
+        elif key == 'tab':
+            # Complete to default_value if empty
+            if not current_text and default_value:
+                current_text = default_value
+            else:
+                m = get_matches(current_text)
+                if m:
+                    current_text = m[0]
+                    current_index = choices.index(m[0])
+                    
+        elif key in ('down', 'right'):
+            matched_choice = None
+            for c in choices:
+                if c.lower() == current_text.lower():
+                    matched_choice = c
+                    break
+            if matched_choice is not None:
+                idx = choices.index(matched_choice)
+                current_index = (idx + 1) % len(choices)
+            else:
+                m = get_matches(current_text)
+                if m:
+                    idx = choices.index(m[0])
+                    current_index = idx
+                else:
+                    current_index = 0
+            current_text = choices[current_index]
+                
+        elif key in ('up', 'left'):
+            matched_choice = None
+            for c in choices:
+                if c.lower() == current_text.lower():
+                    matched_choice = c
+                    break
+            if matched_choice is not None:
+                idx = choices.index(matched_choice)
+                current_index = (idx - 1) % len(choices)
+            else:
+                m = get_matches(current_text)
+                if m:
+                    idx = choices.index(m[0])
+                    current_index = (idx - 1) % len(choices)
+                else:
+                    current_index = len(choices) - 1
+            current_text = choices[current_index]
+                
+        else:
+            if len(key) == 1:
+                current_text += key
+                current_index = -1
+                
+        # Redraw
+        sys.stdout.write(f"\r{full_prompt}{current_text}\x1b[K")
+        sys.stdout.flush()
 
 # --- Formatting Helpers ---
 
@@ -142,7 +245,11 @@ def print_aligned_rows(headers: List[str], rows: List[List[str]]):
     max_widths = [visual_len(h) for h in headers]
     for row in rows:
         for i in range(min(col_count, len(row))):
-            max_widths[i] = max(max_widths[i], visual_len(row[i]))
+            max_widths[i] = max_widths[i], visual_len(row[i])
+            # Max width logic check
+            val_len = visual_len(row[i])
+            if val_len > max_widths[i]:
+                max_widths[i] = val_len
 
     # Print header line
     header_line = [pad_string(h, max_widths[i]) for i, h in enumerate(headers)]
@@ -236,6 +343,15 @@ class InteractiveShell:
             "category", "update", "delete", "import", "export", 
             "backup", "recurring", "exit", "quit"
         ]
+        # Setup command completer for main prompt
+        if readline:
+            self.completer = CommandCompleter(self.commands)
+            readline.set_completer(self.completer.complete)
+            if 'libedit' in readline.__doc__:
+                readline.parse_and_bind("bind -e")
+                readline.parse_and_bind("bind ^I rl_complete")
+            else:
+                readline.parse_and_bind("tab: complete")
 
     def run(self):
         print("==================================================")
@@ -248,9 +364,6 @@ class InteractiveShell:
             try:
                 # Force macOS input source to English (US)
                 switch_to_english()
-                
-                # Set command suggestions for main prompt
-                completer.set_options(self.commands)
                 
                 user_input = input("budget_app> ").strip()
                 if not user_input:
@@ -323,71 +436,38 @@ class InteractiveShell:
     # --- Universal Prompt Helpers ---
 
     def prompt_validated_input(self, prompt_text: str, validator: Callable[[str], Tuple[bool, str, str]], default_value: Optional[str] = None, suggestions: Optional[List[str]] = None) -> str:
-        switch_to_english()
-        
-        if suggestions:
-            completer.set_options(suggestions)
-            enable_arrow_menu_completion()
-        else:
-            completer.set_options([])
-            restore_arrow_history()
-            
-        prompt_suffix = f" [{default_value}]: " if default_value else ": "
-        try:
-            while True:
-                val = input(prompt_text + prompt_suffix).strip()
-                if not val and default_value is not None:
-                    restore_arrow_history()
-                    return default_value
-                
-                is_valid, err, hint = validator(val)
-                if is_valid:
-                    restore_arrow_history()
-                    return val
-                print(f"[오류] {err}")
-                if hint:
-                    print(f"[힌트] {hint}")
-        finally:
-            restore_arrow_history()
+        while True:
+            val = prompt_choices(prompt_text, suggestions or [], default_value)
+            is_valid, err, hint = validator(val)
+            if is_valid:
+                return val
+            print(f"[오류] {err}")
+            if hint:
+                print(f"[힌트] {hint}")
 
     def prompt_category_interactive(self, current_val: Optional[str] = None) -> str:
-        switch_to_english()
         categories = self.service.list_categories()
-        completer.set_options(categories)
-        enable_arrow_menu_completion()
+        prompt_text = "- 카테고리"
         
-        prompt_display = format_choices(categories)
-        prompt_text = f"- 카테고리 {prompt_display}"
-        if current_val:
-            prompt_text += f" [{current_val}]"
-            
-        try:
-            while True:
-                val = input(prompt_text + ": ").strip()
-                if not val:
-                    if current_val is not None:
-                        restore_arrow_history()
-                        return current_val
-                    print("[오류] 카테고리를 입력해야 합니다.")
-                    print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
-                    continue
-                    
-                if val in categories:
-                    restore_arrow_history()
-                    return val
-                    
-                print(f"[오류] 존재하지 않는 카테고리입니다: '{val}'")
+        while True:
+            val = prompt_choices(prompt_text, categories, current_val)
+            if not val:
+                if current_val is not None:
+                    return current_val
+                print("[오류] 카테고리를 입력해야 합니다.")
                 print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
+                continue
                 
-                # Check for registering a new category
-                ans = self.prompt_validated_input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까? {format_choices(['y', 'n'])}", validate_yes_no, None, ["y", "n"])
-                if ans.lower() in ['y', 'yes', '예']:
-                    self.service.add_category(val)
-                    print(f"[저장 완료] category={val}")
-                    restore_arrow_history()
-                    return val
-        finally:
-            restore_arrow_history()
+            if val in categories:
+                return val
+                
+            print(f"[오류] 존재하지 않는 카테고리입니다: '{val}'")
+            print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
+            ans = self.prompt_validated_input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까?", validate_yes_no, None, ["y", "n"])
+            if ans.lower() in ['y', 'yes', '예']:
+                self.service.add_category(val)
+                print(f"[저장 완료] category={val}")
+                return val
 
     # --- CLI Command Handlers ---
 
@@ -418,22 +498,14 @@ class InteractiveShell:
     def handle_add(self):
         print("[새 거래 추가를 시작합니다]")
         today_str = datetime.date.today().strftime("%Y-%m-%d")
-        categories = self.service.list_categories()
         
-        # Display standard options in (Item1 /Item2 /Item3 ) style
-        date_display = format_choices([today_str])
-        type_display = format_choices(["income", "expense"])
-        amount_display = format_choices(["10000", "30000", "50000"])
-        memo_display = format_choices(["점심", "저녁", "월세", "마트"])
-        tag_display = format_choices(["식대", "생필품", "고정비", "교통"])
-
-        date = self.prompt_validated_input(f"- 날짜 (YYYY-MM-DD) {date_display}", validate_date, today_str, [today_str])
-        type_str = self.prompt_validated_input(f"- 타입 {type_display}", validate_type, None, ["income", "expense"])
+        date = self.prompt_validated_input("- 날짜 (YYYY-MM-DD)", validate_date, today_str, [today_str])
+        type_str = self.prompt_validated_input("- 타입", validate_type, None, ["income", "expense"])
         category = self.prompt_category_interactive()
-        amount = int(self.prompt_validated_input(f"- 금액 {amount_display}", validate_amount, None, ["10000", "30000", "50000"]))
+        amount = int(self.prompt_validated_input("- 금액", validate_amount, None, ["10000", "30000", "50000"]))
         
-        memo = self.prompt_validated_input(f"- 메모 (선택) {memo_display}", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
-        tags_input = self.prompt_validated_input(f"- 태그 (선택) {tag_display}", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
+        memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
+        tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
         tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
         
         tx_id = self.service.add_transaction(date, type_str, category, amount, memo, tags)
@@ -471,10 +543,10 @@ class InteractiveShell:
         
         from_date = self.prompt_validated_input("- 검색 시작일 (YYYY-MM-DD)", lambda x: (True, "", "") if not x else validate_date(x), "")
         to_date = self.prompt_validated_input("- 검색 종료일 (YYYY-MM-DD)", lambda x: (True, "", "") if not x else validate_date(x), "")
-        type_str = self.prompt_validated_input(f"- 타입 필터 {format_choices(['income', 'expense'])}", lambda x: (True, "", "") if not x else validate_type(x), "", ["income", "expense"])
+        type_str = self.prompt_validated_input("- 타입 필터", lambda x: (True, "", "") if not x else validate_type(x), "", ["income", "expense"])
         category = self.prompt_validated_input("- 카테고리 필터", lambda x: (True, "", "") if not x or x in categories else (False, f"존재하지 않는 카테고리: {x}", f"목록: {', '.join(categories)}"), "", categories)
         query = input("- 메모 검색어: ").strip()
-        tag = self.prompt_validated_input(f"- 태그 필터 {format_choices(['식대', '생필품', '고정비', '교통'])}", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
+        tag = self.prompt_validated_input("- 태그 필터", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
 
         txs = self.service.search_transactions(
             from_date=from_date if from_date else None,
@@ -543,7 +615,7 @@ class InteractiveShell:
     def handle_budget(self):
         this_month = datetime.date.today().strftime("%Y-%m")
         month = self.prompt_validated_input("- 예산을 책정할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
-        amount = int(self.prompt_validated_input(f"- 한도 금액 (0 이상 정수) {format_choices(['500000', '1000000'])}", validate_amount, None, ["500000", "1000000"]))
+        amount = int(self.prompt_validated_input("- 한도 금액 (0 이상 정수)", validate_amount, None, ["500000", "1000000"]))
         
         self.service.set_budget(month, amount)
         print(f"[저장 완료] {month} 예산 {amount:,}원 설정 완료.")
@@ -555,7 +627,7 @@ class InteractiveShell:
         print("2. 신규 카테고리 추가")
         print("3. 기존 카테고리 삭제")
         
-        choice = self.prompt_validated_input(f"메뉴 선택 {format_choices(['1', '2', '3'])}", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
+        choice = self.prompt_validated_input("메뉴 선택", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
         if not choice:
             return
             
@@ -601,12 +673,12 @@ class InteractiveShell:
         print("\n[기존 데이터를 로드했습니다. 수정을 원하지 않는 항목은 그대로 엔터를 누르세요]")
         
         date = self.prompt_validated_input("- 날짜 (YYYY-MM-DD)", validate_date, target_tx.date, [target_tx.date])
-        type_str = self.prompt_validated_input(f"- 타입 {format_choices(['income', 'expense'])}", validate_type, target_tx.type, ["income", "expense"])
+        type_str = self.prompt_validated_input("- 타입", validate_type, target_tx.type, ["income", "expense"])
         category = self.prompt_category_interactive(target_tx.category)
         amount = int(self.prompt_validated_input("- 금액 (양수)", validate_amount, str(target_tx.amount), [str(target_tx.amount)]))
         
-        memo = self.prompt_validated_input(f"- 메모 (선택) {format_choices(['점심', '저녁', '월세', '마트'])}", lambda x: (True, "", ""), target_tx.memo, ["점심", "저녁", "월세", "마트"])
-        tags_input = self.prompt_validated_input(f"- 태그 (쉼표 구분) {format_choices(['식대', '생필품', '고정비', '교통'])}", lambda x: (True, "", ""), ",".join(target_tx.tags) if target_tx.tags else "", ["식대", "생필품", "고정비", "교통"])
+        memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), target_tx.memo, ["점심", "저녁", "월세", "마트"])
+        tags_input = self.prompt_validated_input("- 태그 (쉼표 구분)", lambda x: (True, "", ""), ",".join(target_tx.tags) if target_tx.tags else "", ["식대", "생필품", "고정비", "교통"])
         
         tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
 
@@ -636,7 +708,7 @@ class InteractiveShell:
             print(f"[오류] 없는 데이터: ID가 '{tx_id}'인 거래를 찾을 수 없습니다.")
             return
 
-        ans = self.prompt_validated_input(f"⚠️ 정말로 거래 ID '{tx_id}'를 영구 삭제하시겠습니까? {format_choices(['y', 'n'])}", validate_yes_no, None, ["y", "n"])
+        ans = self.prompt_validated_input(f"⚠️ 정말로 거래 ID '{tx_id}'를 영구 삭제하시겠습니까?", validate_yes_no, None, ["y", "n"])
         if ans.lower() in ['y', 'yes', '예']:
             success = self.service.delete_transaction(tx_id)
             if success:
@@ -668,7 +740,7 @@ class InteractiveShell:
                 print("[오류] 내보낼 CSV 파일 경로가 필요합니다.")
                 return
 
-        choice = self.prompt_validated_input(f"- 필터 방식 선택 {format_choices(['1: 특정 월', '2: 특정 기간 범위', '엔터: 전체'])}", lambda x: (True, "", "") if x in ["1", "2", ""] else (False, "1 또는 2 중 선택해 주세요.", ""), "", ["1", "2"])
+        choice = self.prompt_validated_input("- 필터 방식 선택", lambda x: (True, "", "") if x in ["1", "2", ""] else (False, "1 또는 2 중 선택해 주세요.", ""), "", ["1", "2"])
         
         month = None
         from_date = None
@@ -699,7 +771,7 @@ class InteractiveShell:
         print("3. 기존 반복 템플릿 삭제")
         print("4. 특정 월 반복 거래 일괄 생성")
         
-        choice = self.prompt_validated_input(f"선택 {format_choices(['1', '2', '3', '4'])}", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
+        choice = self.prompt_validated_input("선택", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
         if not choice:
             return
             
@@ -717,12 +789,12 @@ class InteractiveShell:
             
         elif choice == "2":
             print("[신규 반복 템플릿 등록]")
-            type_str = self.prompt_validated_input(f"- 타입 {format_choices(['income', 'expense'])}", validate_type, None, ["income", "expense"])
+            type_str = self.prompt_validated_input("- 타입", validate_type, None, ["income", "expense"])
             category = self.prompt_category_interactive()
-            amount = int(self.prompt_validated_input(f"- 금액 {format_choices(['10000', '30000', '50000'])}", validate_amount, None, ["10000", "30000", "50000"]))
-            day = int(self.prompt_validated_input(f"- 매월 반복 일자 (1-31) {format_choices(['25', '20', '10'])}", validate_day, None, ["25", "20", "10"]))
-            memo = self.prompt_validated_input(f"- 메모 (선택) {format_choices(['월세', '보험금', '기본급'])}", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
-            tags_input = self.prompt_validated_input(f"- 태그 (선택) {format_choices(['고정비', '월세', '급여'])}", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
+            amount = int(self.prompt_validated_input("- 금액", validate_amount, None, ["10000", "30000", "50000"]))
+            day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, None, ["25", "20", "10"]))
+            memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
+            tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
             tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
             
             new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)

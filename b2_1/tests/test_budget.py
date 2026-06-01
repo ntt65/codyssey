@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+import unittest.mock
 import tempfile
 import csv
 from typing import Generator
@@ -225,6 +226,53 @@ class TestBudgetApp(unittest.TestCase):
         # Generate for different month (2024-02) should work
         count_next = self.service.generate_recurring_transactions("2024-02")
         self.assertEqual(count_next, 2)
+
+    @unittest.mock.patch('sys.stdin.isatty', return_value=True)
+    @unittest.mock.patch('sys.stdin.fileno', return_value=0)
+    @unittest.mock.patch('termios.tcgetattr', return_value=[1, 2, 3, 4, 5, 6, 7])
+    @unittest.mock.patch('termios.tcsetattr', return_value=None)
+    @unittest.mock.patch('tty.setraw', return_value=None)
+    def test_prompt_choices_arrow_cycling(self, mock_setraw, mock_tcsetattr, mock_tcgetattr, mock_fileno, mock_isatty):
+        import unittest.mock
+        from budget_app.cli import prompt_choices
+
+        choices = ["food", "transport", "rent"]
+
+        # Case 1: Empty -> Right -> Right -> Enter (should return "transport")
+        seq1 = ['\x1b', '[', 'C', '\x1b', '[', 'C', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq1.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "transport")
+
+        # Case 2: Empty -> Left -> Left -> Enter (should return "transport" from rent -> transport)
+        seq2 = ['\x1b', '[', 'D', '\x1b', '[', 'D', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq2.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "transport")
+
+        # Case 3: Type 'f' -> Right -> Enter (should return "food")
+        seq3 = ['f', '\x1b', '[', 'C', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq3.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "food")
+
+        # Case 4: Type 'f' -> Left -> Enter (should return "rent" because cycling backward from 'food')
+        seq4 = ['f', '\x1b', '[', 'D', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq4.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "rent")
+
+        # Case 5: Type 'f' -> Tab -> Enter (should return "food")
+        seq5 = ['f', '\t', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq5.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "food")
+
+        # Case 6: Type 'xyz' -> Right -> Enter (no match -> defaults to 'food')
+        seq6 = ['x', 'y', 'z', '\x1b', '[', 'C', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq6.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices), "food")
 
 if __name__ == "__main__":
     unittest.main()
