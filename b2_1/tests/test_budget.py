@@ -274,5 +274,33 @@ class TestBudgetApp(unittest.TestCase):
              unittest.mock.patch('sys.stdout.write'):
             self.assertEqual(prompt_choices("Prompt: ", choices), "food")
 
+    @unittest.mock.patch('sys.stdin.isatty', return_value=True)
+    @unittest.mock.patch('sys.stdin.fileno', return_value=0)
+    @unittest.mock.patch('termios.tcgetattr', return_value=[1, 2, 3, 4, 5, 6, 7])
+    @unittest.mock.patch('termios.tcsetattr', return_value=None)
+    @unittest.mock.patch('tty.setraw', return_value=None)
+    def test_prompt_main_command_cycling_and_history(self, mock_setraw, mock_tcsetattr, mock_tcgetattr, mock_fileno, mock_isatty):
+        import unittest.mock
+        from budget_app.cli import InteractiveShell
+        
+        shell = InteractiveShell(self.service)
+        shell.commands = ["add", "list", "exit"]
+        shell.history = ["help", "list 5"]
+        
+        # Scenario 1: Empty -> Right (should go to first choice "add") -> Right (should go to "list") -> Enter
+        seq1 = ['\x1b', '[', 'C', '\x1b', '[', 'C', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq1.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(shell.prompt_main_command("budget_app> "), "list")
+            
+        # The prompt will automatically append "list" to history
+        self.assertEqual(shell.history[-1], "list")
+        
+        # Scenario 2: Up (should browse history "list") -> Up (should browse "list 5") -> Up (should browse "help") -> Enter
+        seq2 = ['\x1b', '[', 'A', '\x1b', '[', 'A', '\x1b', '[', 'A', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq2.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(shell.prompt_main_command("budget_app> "), "help")
+
 if __name__ == "__main__":
     unittest.main()

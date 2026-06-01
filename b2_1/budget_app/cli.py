@@ -353,6 +353,156 @@ class InteractiveShell:
             else:
                 readline.parse_and_bind("tab: complete")
 
+    def prompt_main_command(self, prompt_text: str) -> str:
+        """
+        Interactive main command prompt using raw terminal keys.
+        Up/Down arrow keys navigate command history.
+        Left/Right arrow keys cycle through commands.
+        Tab completes command matching the prefix.
+        Enter accepts input.
+        """
+        if not sys.stdin.isatty():
+            return input(prompt_text).strip()
+
+        import tty
+        import termios
+
+        sys.stdout.write(prompt_text)
+        sys.stdout.flush()
+
+        current_text = ""
+        history_index = len(self.history)
+        temp_draft = ""
+        choices = self.commands
+
+        def getch() -> str:
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                ch = sys.stdin.read(1)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            return ch
+
+        def get_key() -> str:
+            ch = getch()
+            if ch == '\x1b':
+                ch2 = getch()
+                if ch2 == '[':
+                    ch3 = getch()
+                    if ch3 == 'A': return 'up'
+                    elif ch3 == 'B': return 'down'
+                    elif ch3 == 'C': return 'right'
+                    elif ch3 == 'D': return 'left'
+                return 'esc'
+            elif ch == '\t': return 'tab'
+            elif ch in ('\n', '\r'): return 'enter'
+            elif ch in ('\x7f', '\x08'): return 'backspace'
+            elif ch == '\x03': raise KeyboardInterrupt
+            return ch
+
+        def get_matches(text):
+            if not text:
+                return choices
+            return [c for c in choices if c.lower().startswith(text.lower())]
+
+        while True:
+            key = get_key()
+
+            if key == 'enter':
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                res = current_text.strip()
+                if res:
+                    if not self.history or self.history[-1] != res:
+                        self.history.append(res)
+                        if readline:
+                            readline.add_history(res)
+                return res
+
+            elif key == 'backspace':
+                current_text = current_text[:-1]
+                history_index = len(self.history)
+                temp_draft = current_text
+
+            elif key == 'tab':
+                parts = current_text.split()
+                if not parts:
+                    current_text = choices[0]
+                else:
+                    cmd_part = parts[0]
+                    m = get_matches(cmd_part)
+                    if m:
+                        parts[0] = m[0]
+                        current_text = " ".join(parts)
+                history_index = len(self.history)
+                temp_draft = current_text
+
+            elif key in ('down', 'up'):
+                if key == 'up':
+                    if len(self.history) > 0 and history_index > 0:
+                        if history_index == len(self.history):
+                            temp_draft = current_text
+                        history_index -= 1
+                        current_text = self.history[history_index]
+                elif key == 'down':
+                    if history_index < len(self.history):
+                        history_index += 1
+                        if history_index == len(self.history):
+                            current_text = temp_draft
+                        else:
+                            current_text = self.history[history_index]
+
+            elif key in ('right', 'left'):
+                parts = current_text.split()
+                cmd_part = parts[0] if parts else ""
+                
+                matched_choice = None
+                for c in choices:
+                    if c.lower() == cmd_part.lower():
+                        matched_choice = c
+                        break
+                
+                if matched_choice is not None:
+                    idx = choices.index(matched_choice)
+                    if key == 'right':
+                        next_idx = (idx + 1) % len(choices)
+                    else:
+                        next_idx = (idx - 1) % len(choices)
+                    new_cmd = choices[next_idx]
+                else:
+                    m = get_matches(cmd_part)
+                    if m:
+                        idx = choices.index(m[0])
+                        if key == 'right':
+                            new_cmd = choices[idx]
+                        else:
+                            new_cmd = choices[(idx - 1) % len(choices)]
+                    else:
+                        if key == 'right':
+                            new_cmd = choices[0]
+                        else:
+                            new_cmd = choices[-1]
+                
+                if not parts:
+                    current_text = new_cmd
+                else:
+                    parts[0] = new_cmd
+                    current_text = " ".join(parts)
+                
+                history_index = len(self.history)
+                temp_draft = current_text
+
+            else:
+                if len(key) == 1:
+                    current_text += key
+                    history_index = len(self.history)
+                    temp_draft = current_text
+
+            sys.stdout.write(f"\r{prompt_text}{current_text}\x1b[K")
+            sys.stdout.flush()
+
     def run(self):
         print("==================================================")
         print("   💰 대화형 파일 기반 가계부 (budget_app) v1.0 💰")
@@ -360,12 +510,20 @@ class InteractiveShell:
         print("   - 프로그램 종료: exit 또는 quit 입력")
         print("==================================================")
         
+        self.history = []
+        if readline:
+            history_len = readline.get_current_history_length()
+            for i in range(1, history_len + 1):
+                item = readline.get_history_item(i)
+                if item:
+                    self.history.append(item)
+                    
         while True:
             try:
                 # Force macOS input source to English (US)
                 switch_to_english()
                 
-                user_input = input("budget_app> ").strip()
+                user_input = self.prompt_main_command("budget_app> ").strip()
                 if not user_input:
                     continue
                 
