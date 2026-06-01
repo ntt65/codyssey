@@ -1,0 +1,9 @@
+{"id": "TX-000001", "type": "income", "date": "2026-06-01", "amount": 15000, "category": "food", "memo": "빵", "tags": ["외식"]}
+{"id": "TX-000002", "type": "income", "date": "2026-06-01", "amount": 10000, "category": "education", "memo": "점심", "tags": ["교통"]}
+{"id": "TX-000003", "type": "income", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "점심", "tags": ["식대"]}
+{"id": "TX-000004", "type": "income", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "마트", "tags": ["식대"]}
+{"id": "TX-000005", "type": "income", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "", "tags": []}
+{"id": "TX-000006", "type": "expense", "date": "2026-06-01", "amount": 50000, "category": "food", "memo": "", "tags": ["생필품"]}
+{"id": "TX-000007", "type": "expense", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "", "tags": []}
+{"id": "TX-000008", "type": "expense", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "", "tags": []}
+{"id": "TX-000009", "type": "expense", "date": "2026-06-01", "amount": 10000, "category": "food", "memo": "점심", "tags": ["식대"]}
