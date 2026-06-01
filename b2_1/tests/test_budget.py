@@ -279,6 +279,35 @@ class TestBudgetApp(unittest.TestCase):
     @unittest.mock.patch('termios.tcgetattr', return_value=[1, 2, 3, 4, 5, 6, 7])
     @unittest.mock.patch('termios.tcsetattr', return_value=None)
     @unittest.mock.patch('tty.setraw', return_value=None)
+    def test_prompt_choices_default_prefill(self, mock_setraw, mock_tcsetattr, mock_tcgetattr, mock_fileno, mock_isatty):
+        import unittest.mock
+        from budget_app.cli import prompt_choices
+
+        choices = ["food", "transport", "rent"]
+
+        # Case 1: Default is "food" -> Enter immediately -> returns "food"
+        seq1 = ['\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq1.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices, default_value="food"), "food")
+
+        # Case 2: Default is "food" -> Type "r" -> should clear default and write "r" -> Tab -> Enter (should return "rent")
+        seq2 = ['r', '\t', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq2.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices, default_value="food"), "rent")
+
+        # Case 3: Default is "food" -> Backspace (clears completely) -> Type "t" -> Tab -> Enter (should return "transport")
+        seq3 = ['\x7f', 't', '\t', '\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq3.pop(0)), \
+             unittest.mock.patch('sys.stdout.write'):
+            self.assertEqual(prompt_choices("Prompt: ", choices, default_value="food"), "transport")
+
+    @unittest.mock.patch('sys.stdin.isatty', return_value=True)
+    @unittest.mock.patch('sys.stdin.fileno', return_value=0)
+    @unittest.mock.patch('termios.tcgetattr', return_value=[1, 2, 3, 4, 5, 6, 7])
+    @unittest.mock.patch('termios.tcsetattr', return_value=None)
+    @unittest.mock.patch('tty.setraw', return_value=None)
     def test_prompt_main_command_cycling_and_history(self, mock_setraw, mock_tcsetattr, mock_tcgetattr, mock_fileno, mock_isatty):
         import unittest.mock
         from budget_app.cli import InteractiveShell

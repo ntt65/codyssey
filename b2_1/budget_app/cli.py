@@ -106,11 +106,12 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
     import tty
     import termios
 
-    sys.stdout.write(full_prompt)
-    sys.stdout.flush()
-
-    current_text = ""
+    current_text = default_value if default_value else ""
+    is_default_active = True if default_value else False
     current_index = -1
+
+    sys.stdout.write(f"{full_prompt}{current_text}")
+    sys.stdout.flush()
 
     def getch() -> str:
         fd = sys.stdin.fileno()
@@ -153,12 +154,17 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
             return current_text
             
         elif key == 'backspace':
-            current_text = current_text[:-1]
+            if is_default_active:
+                current_text = ""
+                is_default_active = False
+            else:
+                current_text = current_text[:-1]
             current_index = -1
             
         elif key == 'tab':
-            # Complete to default_value if empty
-            if not current_text and default_value:
+            if is_default_active:
+                is_default_active = False
+            elif not current_text and default_value:
                 current_text = default_value
             else:
                 m = get_matches(current_text)
@@ -167,6 +173,7 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
                     current_index = choices.index(m[0])
                     
         elif key in ('down', 'right'):
+            is_default_active = False
             matched_choice = None
             for c in choices:
                 if c.lower() == current_text.lower():
@@ -185,6 +192,7 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
             current_text = choices[current_index]
                 
         elif key in ('up', 'left'):
+            is_default_active = False
             matched_choice = None
             for c in choices:
                 if c.lower() == current_text.lower():
@@ -204,7 +212,11 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
                 
         else:
             if len(key) == 1:
-                current_text += key
+                if is_default_active:
+                    current_text = key
+                    is_default_active = False
+                else:
+                    current_text += key
                 current_index = -1
                 
         # Redraw
