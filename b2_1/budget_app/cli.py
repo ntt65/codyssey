@@ -722,10 +722,15 @@ class InteractiveShell:
     def handle_import(self, args: List[str]):
         filepath = get_filepath_from_args(args, "--from")
         if not filepath:
-            filepath = input("- 가져올 CSV 파일 경로 (예: data.csv): ").strip()
-            if not filepath:
-                print("[오류] 가져올 CSV 파일 경로가 필요합니다.")
-                return
+            import os
+            csv_files = [f for f in os.listdir('.') if f.endswith('.csv') and os.path.isfile(f)]
+            if csv_files:
+                filepath = self.prompt_validated_input("- 가져올 CSV 파일 경로", lambda x: (True, "", "") if x else (False, "가져올 CSV 파일 경로가 필요합니다.", ""), None, csv_files)
+            else:
+                filepath = input("- 가져올 CSV 파일 경로 (예: data.csv): ").strip()
+                if not filepath:
+                    print("[오류] 가져올 CSV 파일 경로가 필요합니다.")
+                    return
 
         print("[가져오기 진행 중...]")
         imported, skipped = self.service.import_from_csv(filepath)
@@ -735,7 +740,7 @@ class InteractiveShell:
     def handle_export(self, args: List[str]):
         filepath = get_filepath_from_args(args, "--out")
         if not filepath:
-            filepath = input("- 내보낼 CSV 파일 경로 (예: backup.csv): ").strip()
+            filepath = self.prompt_validated_input("- 내보낼 CSV 파일 경로", lambda x: (True, "", "") if x else (False, "내보낼 CSV 파일 경로가 필요합니다.", ""), "backup.csv", ["backup.csv"])
             if not filepath:
                 print("[오류] 내보낼 CSV 파일 경로가 필요합니다.")
                 return
