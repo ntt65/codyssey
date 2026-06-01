@@ -87,16 +87,16 @@ def enable_arrow_menu_completion():
     if readline:
         if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: menu-complete")
-            readline.parse_and_bind('"\e[A": menu-complete-backward')
-            readline.parse_and_bind('"\e[B": menu-complete')
+            readline.parse_and_bind(r'"\e[A": menu-complete-backward')
+            readline.parse_and_bind(r'"\e[B": menu-complete')
 
 def restore_arrow_history():
     """Restores standard GNU Readline behavior: Tab completes text, Up/Down arrow keys navigate command history."""
     if readline:
         if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: complete")
-            readline.parse_and_bind('"\e[A": previous-history')
-            readline.parse_and_bind('"\e[B": next-history')
+            readline.parse_and_bind(r'"\e[A": previous-history')
+            readline.parse_and_bind(r'"\e[B": next-history')
 
 if readline:
     readline.set_completer(completer.complete)
