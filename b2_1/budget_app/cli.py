@@ -91,17 +91,25 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
     # If no choices, fallback to standard input
     if not choices:
         prompt_suffix = f" [{default_value}]: " if default_value else ": "
-        return input(prompt_text + prompt_suffix).strip()
+        res = input(prompt_text + prompt_suffix).strip()
+        if not res and default_value:
+            return default_value
+        return res
 
-    prompt_display = format_choices(choices)
-    full_prompt = f"{prompt_text} {prompt_display}"
-    if default_value:
-        full_prompt += f" [{default_value}]"
-    full_prompt += ": "
+    # Hide choices list if it only contains the default value (e.g. today's date)
+    if len(choices) == 1 and choices[0] == default_value:
+        prompt_display = ""
+    else:
+        prompt_display = " " + format_choices(choices)
+
+    full_prompt = f"{prompt_text}{prompt_display}: "
 
     # Verify if we can run in raw TTY mode
     if not sys.stdin.isatty():
-        return input(full_prompt).strip()
+        res = input(full_prompt).strip()
+        if not res and default_value:
+            return default_value
+        return res
 
     import tty
     import termios

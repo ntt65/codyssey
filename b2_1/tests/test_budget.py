@@ -303,6 +303,17 @@ class TestBudgetApp(unittest.TestCase):
              unittest.mock.patch('sys.stdout.write'):
             self.assertEqual(prompt_choices("Prompt: ", choices, default_value="food"), "transport")
 
+        # Case 4: Single choice equal to default value -> verify choices list and brackets are hidden
+        seq4 = ['\n']
+        with unittest.mock.patch('sys.stdin.read', side_effect=lambda n: seq4.pop(0)), \
+             unittest.mock.patch('sys.stdout.write') as mock_write:
+            val = prompt_choices("- 날짜 (YYYY-MM-DD)", ["2026-06-01"], default_value="2026-06-01")
+            self.assertEqual(val, "2026-06-01")
+            written_str = "".join(call[0][0] for call in mock_write.call_args_list)
+            self.assertIn("- 날짜 (YYYY-MM-DD): 2026-06-01", written_str)
+            self.assertNotIn("(2026-06-01 )", written_str)
+            self.assertNotIn("[2026-06-01]", written_str)
+
     @unittest.mock.patch('sys.stdin.isatty', return_value=True)
     @unittest.mock.patch('sys.stdin.fileno', return_value=0)
     @unittest.mock.patch('termios.tcgetattr', return_value=[1, 2, 3, 4, 5, 6, 7])
