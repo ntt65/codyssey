@@ -342,5 +342,21 @@ class TestBudgetApp(unittest.TestCase):
              unittest.mock.patch('sys.stdout.write'):
             self.assertEqual(shell.prompt_main_command("budget_app> "), "help")
 
+    def test_print_aligned_rows(self):
+        from budget_app.cli import print_aligned_rows
+        import io
+        import contextlib
+
+        headers = ["id", "val"]
+        rows = [["1", "apple"], ["2", "banana"]]
+        
+        f = io.StringIO()
+        with contextlib.redirect_stdout(f):
+            print_aligned_rows(headers, rows)
+            
+        output = f.getvalue()
+        self.assertIn("id", output)
+        self.assertIn("banana", output)
+
 if __name__ == "__main__":
     unittest.main()

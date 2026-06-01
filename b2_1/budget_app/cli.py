@@ -265,8 +265,6 @@ def print_aligned_rows(headers: List[str], rows: List[List[str]]):
     max_widths = [visual_len(h) for h in headers]
     for row in rows:
         for i in range(min(col_count, len(row))):
-            max_widths[i] = max_widths[i], visual_len(row[i])
-            # Max width logic check
             val_len = visual_len(row[i])
             if val_len > max_widths[i]:
                 max_widths[i] = val_len
