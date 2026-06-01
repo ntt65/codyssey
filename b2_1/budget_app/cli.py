@@ -82,16 +82,31 @@ class DynamicCompleter:
 # Global completer instance
 completer = DynamicCompleter()
 
+def enable_arrow_menu_completion():
+    """Configures readline to cycle autocomplete choices with Tab and Up/Down arrow keys during data entry."""
+    if readline:
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: menu-complete")
+            readline.parse_and_bind('"\e[A": menu-complete-backward')
+            readline.parse_and_bind('"\e[B": menu-complete')
+
+def restore_arrow_history():
+    """Restores standard GNU Readline behavior: Tab completes text, Up/Down arrow keys navigate command history."""
+    if readline:
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+            readline.parse_and_bind('"\e[A": previous-history')
+            readline.parse_and_bind('"\e[B": next-history')
+
 if readline:
     readline.set_completer(completer.complete)
-    # Enable standard tab completion (No cycling menu, normal completion list behavior)
     if 'libedit' in readline.__doc__:
         # macOS default editline configuration
         readline.parse_and_bind("bind -e")
         readline.parse_and_bind("bind ^I rl_complete")
     else:
-        # GNU Readline configuration: standard tab completion
-        readline.parse_and_bind("tab: complete")
+        # GNU Readline configuration: start with command history mode active
+        restore_arrow_history()
 
 # --- Formatting Helpers ---
 
@@ -312,51 +327,67 @@ class InteractiveShell:
         
         if suggestions:
             completer.set_options(suggestions)
+            enable_arrow_menu_completion()
         else:
             completer.set_options([])
+            restore_arrow_history()
             
         prompt_suffix = f" [{default_value}]: " if default_value else ": "
-        while True:
-            val = input(prompt_text + prompt_suffix).strip()
-            if not val and default_value is not None:
-                return default_value
-            
-            is_valid, err, hint = validator(val)
-            if is_valid:
-                return val
-            print(f"[오류] {err}")
-            if hint:
-                print(f"[힌트] {hint}")
+        try:
+            while True:
+                val = input(prompt_text + prompt_suffix).strip()
+                if not val and default_value is not None:
+                    restore_arrow_history()
+                    return default_value
+                
+                is_valid, err, hint = validator(val)
+                if is_valid:
+                    restore_arrow_history()
+                    return val
+                print(f"[오류] {err}")
+                if hint:
+                    print(f"[힌트] {hint}")
+        finally:
+            restore_arrow_history()
 
     def prompt_category_interactive(self, current_val: Optional[str] = None) -> str:
         switch_to_english()
         categories = self.service.list_categories()
         completer.set_options(categories)
+        enable_arrow_menu_completion()
         
         prompt_display = format_choices(categories)
         prompt_text = f"- 카테고리 {prompt_display}"
         if current_val:
             prompt_text += f" [{current_val}]"
             
-        while True:
-            val = input(prompt_text + ": ").strip()
-            if not val:
-                if current_val is not None:
-                    return current_val
-                print("[오류] 카테고리를 입력해야 합니다.")
+        try:
+            while True:
+                val = input(prompt_text + ": ").strip()
+                if not val:
+                    if current_val is not None:
+                        restore_arrow_history()
+                        return current_val
+                    print("[오류] 카테고리를 입력해야 합니다.")
+                    print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
+                    continue
+                    
+                if val in categories:
+                    restore_arrow_history()
+                    return val
+                    
+                print(f"[오류] 존재하지 않는 카테고리입니다: '{val}'")
                 print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
-                continue
                 
-            if val in categories:
-                return val
-                
-            print(f"[오류] 존재하지 않는 카테고리입니다: '{val}'")
-            print(f"[힌트] 등록된 카테고리 목록: {', '.join(categories)}")
-            ans = self.prompt_validated_input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까? (y /n )", validate_yes_no, None, ["y", "n"])
-            if ans.lower() in ['y', 'yes', '예']:
-                self.service.add_category(val)
-                print(f"[저장 완료] category={val}")
-                return val
+                # Check for registering a new category
+                ans = self.prompt_validated_input(f"       '{val}' 카테고리를 가계부에 새로 추가하고 진행하시겠습니까? {format_choices(['y', 'n'])}", validate_yes_no, None, ["y", "n"])
+                if ans.lower() in ['y', 'yes', '예']:
+                    self.service.add_category(val)
+                    print(f"[저장 완료] category={val}")
+                    restore_arrow_history()
+                    return val
+        finally:
+            restore_arrow_history()
 
     # --- CLI Command Handlers ---
 
