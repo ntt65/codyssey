@@ -90,10 +90,8 @@ if readline:
         readline.parse_and_bind("bind ^I rl_complete")
         readline.parse_and_bind("bind -e")
     else:
-        # GNU Readline configuration: Tab and Up/Down arrows cycle options
+        # GNU Readline configuration: Tab cycles options, Up/Down arrow keys recall command history
         readline.parse_and_bind("tab: menu-complete")
-        readline.parse_and_bind('"\e[A": menu-complete-backward')
-        readline.parse_and_bind('"\e[B": menu-complete')
 
 # --- Formatting Helpers ---
 
