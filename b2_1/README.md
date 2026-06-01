@@ -225,3 +225,120 @@ $ python3 -m budget_app recurring generate --month 2024-01
 `update`, `delete`, `category remove`, `save_budgets` 등의 갱신형 연산 시, 원본 파일에 직접 수정 쓰기를 시도하다가 전원 공급 차단 등의 하드웨어 사고가 발생해 데이터가 날아가는 현상을 완벽하게 방지합니다.
 - 임시 파일(`tempfile.mkstemp`)을 생성해 신규/정정 데이터를 우선 작성합니다.
 - 쓰기가 정상적으로 완료되면 운영체제 수준에서 제공하는 원자적 덮어쓰기 기능인 `os.replace`를 사용하여 파일 교체를 완벽하게 완료합니다.
+
+---
+
+## 6. 구조 및 설계 다이어그램 (Architecture Diagrams)
+
+### 6.1 클래스 다이어그램 (Class Diagram)
+```mermaid
+classDiagram
+    class Transaction {
+        +str id
+        +str type
+        +str date
+        +int amount
+        +str category
+        +str memo
+        +List~str~ tags
+        +to_dict() dict
+        +from_dict(dict data) Transaction$
+    }
+    class RecurringTemplate {
+        +str id
+        +str type
+        +str category
+        +int amount
+        +int day
+        +str memo
+        +List~str~ tags
+        +to_dict() dict
+        +from_dict(dict data) RecurringTemplate$
+    }
+    class FileRepository {
+        +str data_dir
+        +str transactions_path
+        +str categories_path
+        +str budgets_path
+        +str recurring_path
+        +stream_transactions() Generator
+        +append_transaction(Transaction tx)
+        +update_or_delete_transaction(str tx_id, Transaction updated_tx) bool
+        +load_categories() List~str~
+        +save_categories(List~str~ categories)
+        +load_budgets() Dict~str, int~
+        +save_budgets(Dict~str, int~ budgets)
+        +get_next_transaction_id() str
+        +get_next_recurring_id() str
+    }
+    class BudgetService {
+        -FileRepository repository
+        +add_transaction(str date, str type_str, str category, int amount, str memo, List~str~ tags) str
+        +list_transactions(int limit) List~Transaction~
+        +search_transactions(...) List~Transaction~
+        +update_transaction(...) bool
+        +delete_transaction(str tx_id) bool
+        +add_category(str name) bool
+        +list_categories() List~str~
+        +remove_category(str name) bool
+        +set_budget(str month, int amount)
+        +get_monthly_summary(str month, int top_n) dict
+        +export_to_csv(...) int
+        +import_from_csv(str filepath) Tuple~int, int~
+        +create_backup() str
+        +load_recurring_templates() List~RecurringTemplate~
+        +save_recurring_templates(List~RecurringTemplate~ templates)
+        +add_recurring_template(...) str
+        +remove_recurring_template(str template_id) bool
+        +generate_recurring_transactions(str month) int
+    }
+
+    BudgetService --> FileRepository : uses
+    FileRepository ..> Transaction : streams/writes
+    FileRepository ..> RecurringTemplate : loads/saves
+    BudgetService ..> Transaction : creates/manages
+    BudgetService ..> RecurringTemplate : creates/manages
+```
+
+### 6.2 CLI 실행 흐름도 (Command Execution Flowchart)
+```mermaid
+flowchart TD
+    Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[인자 파싱 및 데이터 폴더 설정]
+    ParseArgs --> InitRepo[FileRepository 초기화]
+    InitRepo --> CheckCats{카테고리 파일 존재?}
+    CheckCats -- No --> GenDefaultCats[기본 카테고리 자동 생성]
+    CheckCats -- Yes --> InitService[BudgetService 초기화]
+    GenDefaultCats --> InitService
+    InitService --> RouteCmd{입력된 명령?}
+    
+    RouteCmd -->|add| CmdAdd[대화형 입력 및 입력 검증]
+    CmdAdd --> SaveAdd[transactions.jsonl에 추가 기록]
+    SaveAdd --> SuccessAdd[생성된 ID 출력 및 종료]
+    
+    RouteCmd -->|list| CmdList[제너레이터 스트리밍]
+    CmdList --> SortList[크기 limit 고정 버퍼 정렬]
+    SortList --> RenderTable[한글 폭 보정 표 렌더링 출력]
+    
+    RouteCmd -->|update/delete| CmdUpdateDelete[대화형 수정/삭제 입력]
+    CmdUpdateDelete --> AtomicWrite[임시 파일에 신규 데이터 작성]
+    AtomicWrite --> AtomicRename[os.replace 원자적 파일 교체]
+    AtomicRename --> SuccessUD[성공 메시지 출력]
+    
+    RouteCmd -->|summary| CmdSummary[월별 지출 스트리밍 집계]
+    CmdSummary --> CheckBudget{설정된 예산 확인}
+    CheckBudget -- Yes --> CompBudget[사용률 계산 및 초과 경고 체크]
+    CheckBudget -- No --> PrintSummary[결과 출력]
+    CompBudget --> PrintSummary
+    
+    RouteCmd -->|recurring generate| CmdRecurring[반복 내역 자동 생성]
+    CmdRecurring --> DupCheck{동일 거래 내역 유무 확인}
+    DupCheck -- No --> GenTx[신규 트랜잭션 추가 기록]
+    DupCheck -- Yes --> SkipTx[중복으로 인해 건너뜀]
+    
+    PrintSummary --> End([프로그램 종료])
+    SuccessAdd --> End
+    RenderTable --> End
+    SuccessUD --> End
+    GenTx --> End
+    SkipTx --> End
+```
