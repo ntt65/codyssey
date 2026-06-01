@@ -1,35 +1,39 @@
-# 파일 기반 가계부 콘솔 프로그램 (Budget App)
+# 대화형 파일 기반 가계부 콘솔 프로그램 (Budget App)
 
-본 프로젝트는 파이썬 표준 라이브러리만을 활용하여 구축된 **유지보수 가능하고 예외 상황에서도 데이터가 안전한 파일 기반 가계부 콘솔 프로그램**입니다. 
-제너레이터 스트리밍, 데코레이터 패턴, 타입 힌트 및 모듈화 설계를 완벽하게 적용하였습니다.
+본 프로젝트는 파이썬 표준 라이브러리만을 활용하여 구축된 **유지보수 가능하고 예외 상황에서도 데이터가 안전한 대화형 가계부 콘솔 프로그램**입니다.
+터미널에서 한 번 구동하면 셸 인터페이스가 활성화되어 내부에서 다양한 명령어를 바로 간편하게 실행할 수 있습니다. 
+제너레이터 스트리밍, 데코레이터 패턴, 타입 힌트, 모듈화 설계 및 파일 원자적 교체 기능이 포함되어 있습니다.
 
 ---
 
 ## 1. 실행 방법
 
-본 프로그램은 `python3 -m budget_app` 명령을 통해 실행할 수 있습니다. 
-패키지 경로 인식을 위해 가계부 루트 폴더(`/Users/mpeg46551/git/codyssey/b2_1`) 내에서 실행해 주십시오.
+패키지 경로 인식을 위해 가계부 루트 폴더(`/Users/mpeg46551/git/codyssey/b2_1`) 내에서 아래 명령을 통해 실행해 주십시오.
 
 ```bash
-# 기본 사용 방법
-python3 -m budget_app <command> [options]
+# 가계부 셸 시작
+python3 -m budget_app
 
-# 도움말 보기 (전체 또는 개별 서브커맨드)
-python3 -m budget_app --help
-python3 -m budget_app search --help
+# 커스텀 데이터 경로 지정하여 가계부 셸 시작
+python3 -m budget_app --data-dir ./my_custom_data
+```
+
+### 셸 진입 후 구동 예시
+프로그램을 실행하면 가계부 전용 셸 프롬프트(`budget_app> `)가 표시되며 바로 명령을 내릴 수 있습니다:
+```text
+==================================================
+   💰 대화형 파일 기반 가계부 (budget_app) v1.0 💰
+   - 사용법 확인: help 입력
+   - 프로그램 종료: exit 또는 quit 입력
+==================================================
+budget_app> help
 ```
 
 ---
 
 ## 2. 저장 파일 위치 및 형식
 
-프로그램 실행 시 데이터는 지정된 저장 폴더 내에 저장되며, 기본 경로는 `./data`입니다.
-`--data-dir <경로>` 옵션을 통해 데이터 디렉터리를 커스텀하게 설정할 수 있습니다.
-
-```bash
-# 커스텀 데이터 경로 지정 예시
-python3 -m budget_app --data-dir ./my_custom_data list
-```
+셸 구동 시 데이터 저장 디렉터리는 기본적으로 `./data` 폴더가 사용되며, 최초 기동 시 해당 폴더가 없는 경우 자동으로 생성됩니다. 
 
 ### 저장 파일 구조 (JSONL 형식)
 데이터 저장 안전성과 제너레이터 스트리밍 성능 극대화를 위해 개행 구분 JSON 형식인 **JSONL (JSON Lines)** 형식을 채택했습니다. 
@@ -55,176 +59,112 @@ python3 -m budget_app --data-dir ./my_custom_data list
 
 ---
 
-## 4. 주요 명령 및 사용 예시
+## 4. 가계부 셸 명령어 및 대화형 동작 방식
 
-### 1) 거래 내역 추가 (add) - 대화형
-날짜, 타입, 카테고리, 금액 등을 대화형 콘솔 입력(`input()`)을 통해 순차적으로 입력받습니다. 잘못된 입력값이 오면 명확한 에러 원인과 힌트를 출력하고 다시 입력을 요구합니다.
-```bash
-$ python3 -m budget_app add
-날짜(YYYY-MM-DD): 2024-01-15
-타입(income/expense): expense
-카테고리: food
-금액(양수): 15000
-메모(선택): 점심식사
-태그(쉼표로 구분, 없으면 엔터): 점심,맛있는식사
+### 1) 도움말 출력 (help)
+사용 가능한 명령어 전체 정보와 한글 설명을 포맷팅 테이블로 출력합니다.
+```text
+budget_app> help
+[ 사용 가능한 명령어 목록 ]
+--------------------------------------------------------------------------------
+명령어       | 인자 형태       | 한글 기능 설명
+--------------------------------------------------------------------------------
+help         | 없음            | 도움말 및 명령어 안내를 출력합니다.
+...
+```
+
+### 2) 거래 내역 추가 (add)
+순차적인 질문식 프롬프트를 통해 내역을 입력받으며, 유효성 검사 오류 시 오류 사유와 힌트를 출력하고 재요청합니다. 존재하지 않는 카테고리 입력 시 즉각 신규 추가 분기로 안내합니다.
+```text
+budget_app> add
+[새 거래 추가를 시작합니다]
+- 날짜 (YYYY-MM-DD) [2026-06-01]: 2024-01-15
+- 타입 (income/expense): expense
+- 카테고리: food
+- 금액 (양수): 15000
+- 메모 (선택, 없으면 엔터): 점심 식사
+- 태그 (쉼표 구분, 없으면 엔터): 외식
 [저장 완료] id=TX-000001
 ```
 
-### 2) 거래 내역 목록 조회 (list)
-최신 거래 등록 순으로 목록을 테이블 형태로 예쁘게 정렬하여 출력합니다.
-```bash
-$ python3 -m budget_app list --limit 5
-id        | date       | type    | category | amount | memo    | tags
-TX-000002 | 2024-01-16 | income  | salary   | 300000 | 1월 월급 | monthly
-TX-000001 | 2024-01-15 | expense | food     | 15000  | 점심식사 | 점심,맛있는식사
+### 3) 거래 내역 목록 조회 (list)
+최근 가계부 내역을 최신순으로 정렬 표 형식으로 출력합니다. limit 값을 선택적 인자로 설정할 수 있습니다.
+```text
+budget_app> list 2
+id        | date       | type    | category | amount | memo  | tags
+TX-000002 | 2024-01-16 | income  | salary   | 300000 | 월급  | monthly
+TX-000001 | 2024-01-15 | expense | food     | 15000  | 점심  | 외식
 ```
 
-### 3) 조건별 검색 (search)
-날짜 범위, 카테고리, 타입, 메모 검색어, 태그 등의 옵션 필터를 지원합니다.
-```bash
-$ python3 -m budget_app search --from 2024-01-01 --to 2024-01-31 --category food --type expense
+### 4) 조건별 상세 검색 (search)
+시작일, 종료일, 타입, 카테고리, 메모 검색 키워드, 태그 필터를 단계별 대화식 인터페이스를 통해 입력받아 복합 검색을 수행합니다. (지정하지 않는 조건은 엔터를 쳐서 건너뜁니다)
+```text
+budget_app> search
+[필터링 검색을 설정합니다. 건너뛰려면 엔터를 입력해 주세요]
+- 검색 시작일 (YYYY-MM-DD): 2024-01-01
+- 검색 종료일 (YYYY-MM-DD): 
+- 타입 필터 (income/expense): expense
+- 카테고리 필터: 
+- 메모 검색어: 점심
+- 태그 필터: 
 ```
 
 ### 5) 월별 요약 및 예산 체크 (summary)
-지정한 월의 총 수입, 총 지출, 잔액과 카테고리별 지출 상위 TOP N을 출력합니다. 예산이 설정된 달에는 예산 대비 사용률(%)과 초과 경고 문구를 출력합니다.
-```bash
-$ python3 -m budget_app summary --month 2024-01 --top 3
-총 수입: 300000원
-총 지출: 15000원
-잔액: 285000원
-예산: 100000원 (사용률 15.0%)
+지정한 월(생략 시 대화형 입력 또는 현재 달 적용)의 총수입, 총지출, 잔액과 함께 지출 상위 TOP 3 카테고리를 백분율 정보와 함께 도식화합니다. 예산이 지정된 월에는 소비율(%) 및 예산 초과 시 강력한 경고 메시지가 연계 출력됩니다.
+```text
+budget_app> summary 2024-01
+==================================================
+   📊 2024-01 재정 요약 리포트
+==================================================
+- 총 수입: 3,000,000원
+- 총 지출: 15,000원
+- 잔액: 2,985,000원
+- 책정 예산: 100,000원 (사용률: 15.0%)
 
-지출 TOP 3
-1) food 15000원
+[ 지출 TOP 3 카테고리 ]
+1) food : 15,000원 (100.0%)
+==================================================
 ```
 
-### 6) 예산 설정 (budget set)
-```bash
-$ python3 -m budget_app budget set --month 2024-01 --amount 100000
-[저장 완료] 2024-01 예산 100000원
+### 6) 카테고리 관리 (category)
+목록 조회, 카테고리 추가, 기존 카테고리 삭제 관리 서브 메뉴를 제공합니다. 사용 중인 카테고리는 삭제가 안전하게 차단됩니다.
+```text
+budget_app> category
+[카테고리 설정 관리]
+1. 등록된 카테고리 목록 조회
+2. 신규 카테고리 추가
+3. 기존 카테고리 삭제
+메뉴 선택 (1/2/3/엔터(취소)): 1
 ```
 
-### 7) 카테고리 관리 (category)
-카테고리를 추가, 삭제, 목록 조회를 합니다. 삭제 시 해당 카테고리를 사용하는 기존 내역이 있다면 삭제를 안전하게 차단합니다.
-```bash
-$ python3 -m budget_app category list
-- food
-- transport
-...
+### 7) 거래 수정 (update) 및 삭제 (delete)
+- `update [ID]`: 각 항목의 기존 값을 디폴트`[...]`로 보여주며, 변경 사항만 덮어써 수정합니다.
+- `delete [ID]`: 정말 삭제할 것인지 묻는 2중 확인 컨펌 후 데이터를 안전히 삭제합니다.
 
-$ python3 -m budget_app category add
-카테고리명: shopping
-[저장 완료] category=shopping
-
-$ python3 -m budget_app category remove
-삭제할 카테고리명: shopping
-[삭제 완료] category=shopping
-```
-
-### 8) 거래 수정 (update) - 대화형
-수정하려는 ID를 인자로 넘겨주면, 각 필드의 기존 값을 대괄호`[]` 안에 보여주며 변경하고 싶지 않으면 엔터를 쳐서 그대로 보존할 수 있습니다.
-```bash
-$ python3 -m budget_app update --id TX-000001
-날짜(YYYY-MM-DD) [2024-01-15]: 2024-01-15
-타입(income/expense) [expense]: 
-카테고리 [food]: 
-금액(양수) [15000]: 16000
-메모(선택) [점심식사]: 
-태그(쉼표로 구분, 없으면 엔터) [점심,맛있는식사]: 
-[수정 성공] id=TX-000001
-```
-
-### 9) 거래 삭제 (delete)
-```bash
-$ python3 -m budget_app delete --id TX-000001
-[삭제 성공] id=TX-000001
-```
-
-### 10) 가져오기 및 내보내기 (import / export)
-```bash
-# 가져오기
-python3 -m budget_app import --from data.csv
-
-# 내보내기 (특정 달 또는 기간 필수 지정)
-python3 -m budget_app export --out backup.csv --month 2024-01
-```
-
-### 11) 데이터 백업 (backup - 보너스 과제 1)
-저장되어 있는 가계부 데이터(transactions, categories, budgets, recurring)를 하나의 타임스탬프 zip 파일로 압축하여 백업 폴더(`./data/backups/`)에 저장합니다.
-```bash
-$ python3 -m budget_app backup
-[백업 완료] 백업 파일: ./data/backups/backup_20260601_201500.zip
-```
-
-### 12) 반복 내역 자동 관리 (recurring - 보너스 과제 2)
-매달 고정적으로 지출/수입되는 월세, 월급 등을 규칙 템플릿으로 등록하고 특정 월에 일괄 자동 생성합니다. 중복 생성을 원천 방지하는 안전 알고리즘이 적용되어 있습니다.
-```bash
-# 반복 내역 등록 (일자 지정)
-$ python3 -m budget_app recurring add
-타입(income/expense): expense
-카테고리: rent
-금액(양수): 500000
-매월 반복 일자(1-31): 25
-메모(선택): 월세 납부
-태그: 고정비
-[저장 완료] template_id=REC-000001
-
-# 반복 내역 목록 보기
-$ python3 -m budget_app recurring list
-
-# 특정 월에 반복 거래 내역 자동 생성
-$ python3 -m budget_app recurring generate --month 2024-01
-[생성 완료] 2024-01에 1건의 반복 거래 내역을 등록하였습니다.
-```
+### 8) 일괄 연동 및 기타 기능
+- `import`: 외부 CSV 파일을 가계부 규격으로 파싱 후 데이터 오류 라인은 스킵 처리하여 가정보를 안내합니다.
+- `export`: 대상 월 또는 기간 범위를 선택식으로 지정받아 고정 규격 CSV로 추출 저장합니다.
+- `backup` (보너스 과제 1): 전체 가계부 파일을 단일 타임스탬프 zip 파일로 압축 생성합니다.
+- `recurring` (보너스 과제 2): 매달 반복 지출/수입 템플릿(REC-XXXXXX)을 등록하고, 특정 월에 일괄 자동 생성합니다. (중복 방지 내장)
 
 ---
 
 ## 5. 설계 및 기술적 특징 분석
 
-이 프로그램은 교육적 목적과 유지보수 확장성을 고려하여 엄격한 아키텍처 규칙과 파이썬 고급 언어 특징들을 활용했습니다.
-
 ### 5.1 계층 구조 설계 (Layered Architecture) 및 책임 분리
-코드 가독성과 쉬운 유지보수를 위해 계층 구조로 구조화했습니다.
-- **모델 (`models.py`)**: `dataclass`를 사용하여 `Transaction` 및 `RecurringTemplate`의 데이터 규격(스키마)과 딕셔너리 직렬화/역직렬화 메서드만을 담당합니다.
-- **저장소 (`repository.py`)**: 파일 시스템에 직접 접근해 데이터를 CRUD하고 파일의 존재 여부 보장, 순차적 ID 생성 등의 File I/O 기능을 캡슐화합니다.
-- **서비스 (`service.py`)**: 비즈니스 로직(입력값 유효성 검증, 데이터 집계 및 계산, 중복 삽입 방지 검사, 백업 등)을 전담합니다.
-- **CLI (`cli.py`, `__main__.py`)**: 사용자 입력 및 아규먼트를 파싱하고 테이블 정렬 포매팅 등 화면 입출력을 책임집니다.
+- **모델 (`models.py`)**: `dataclass`를 사용하여 `Transaction` 및 `RecurringTemplate`의 순수 스키마 정의.
+- **저장소 (`repository.py`)**: 파일 시스템 CRUD 캡슐화 및 원자적 파일 교체 전략 수행.
+- **서비스 (`service.py`)**: 핵심 계산 로직, CSV 로더, 중복 감지, 백업 집계 등 독립된 비즈니스 룰 전담.
+- **CLI (`cli.py`, `__main__.py`)**: 대화형 셸 주 루프 가동, 예외 복원 셸 컨텍스트 제어, 한글 보정 정렬 출력.
 
 ### 5.2 제너레이터(Generator) 기반 파일 스트리밍 처리
-대용량 트랜잭션 파일 상황에서도 메모리 오버플로우나 성능 저하가 발생하지 않도록 설계했습니다.
-- **이유**: `read()`나 `readlines()`로 전체 파일의 내용을 한 번에 메모리에 적재하면 메모리 점유율이 데이터 크기에 비례하여 기하급수적으로 증가합니다. 
-- **구현 방식**: `yield` 구문을 사용해 한 번에 파일의 단 한 줄(line)만 로드하여 파싱합니다.
-  ```python
-  def stream_transactions(self) -> Generator[Transaction, None, None]:
-      if not os.path.exists(self.transactions_path):
-          return
-      with open(self.transactions_path, "r", encoding="utf-8") as f:
-          for line in f:
-              yield Transaction.from_dict(json.loads(line))
-  ```
-- **메모리 효율적 정렬 및 필터링 ($O(limit)$ 메모리)**:
-  `list` 및 `search` 시 최신순으로 정렬하기 위해, 파일 내의 모든 레코드를 리스트로 받지 않고 **크기가 `limit`으로 고정된 리스트/힙 버퍼**만을 활용해 스트리밍 중에 실시간으로 최신 N개만 추려냄으로써 $O(\text{limit})$의 아주 작은 메모리 공간 복잡도 내에서 정렬 및 조회를 완료합니다.
+대용량 파일에서 메모리 잠식을 피하기 위해 `yield`를 사용해 파일 라인을 실시간으로 한 줄씩만 로드합니다. `list` 및 `search` 결과 정렬 시에도 파일 내 전체 데이터를 메모리에 올리지 않고 **최대 `limit` 크기로 크기가 제한된 정렬 삽입 버퍼**를 활용하여 $O(\text{limit})$의 매우 제한적인 메모리 자원으로 실시간 조회 정렬을 이행합니다.
 
-### 5.3 데코레이터(Decorator)를 통한 공통 관심사 분리
-로깅, 경과 시간 측정, 예외 처리 등의 공통 로직을 주 비즈니스 흐름과 분리해 유지보수성을 크게 높였습니다.
-- **@catch_errors**: CLI 경계면에서 발생하는 예외를 잡아서 복잡한 파이썬 스택 트레이스를 숨기고 사용자 친화적인 원인과 힌트를 출력한 후, 올바른 비정상 종료 코드(0이 아닌 값)로 프로그램을 안전하게 종료시킵니다.
-- **@measure_time**: 각 비즈니스 메서드의 경과 시간을 나노초/밀리초 수준에서 정밀 측정하여 로그를 stderr로 기록합니다.
-- **@log_action**: 주요 트랜잭션 수명 주기 작업의 시작과 성공적인 마무리를 콘솔에 기록합니다.
+### 5.3 데코레이터(Decorator)를 통한 관심사 분리 및 에러 복원
+로깅(`@log_action`), 경과 시간 측정(`@measure_time`) 및 에러 감지 `@catch_errors`가 분리되어 핵심 기능과 느슨하게 결합되어 있습니다. 특히 셸 구동 내부의 데코레이터는 사용자 에러 시 원인과 힌트를 출력하고 프로세스를 비정상 종료시키는 대신, 가계부 셸 루프 상태로 정상 복귀하도록 설계되어 안전성을 보장합니다.
 
-### 5.4 타입 힌트(Type Hints)의 도입과 장점
-모든 함수와 메서드의 인자, 리턴 타입에 명시적인 타입 힌트(`List`, `Dict`, `Tuple`, `Optional` 등)를 적용했습니다.
-- **이유 및 이점**: 
-  1. 개발자가 함수 시그니처만 보고도 어떤 구조의 입력값을 전달하고 어떤 결괏값을 받는지 파악할 수 있는 **명확한 개발 계약(Contract)** 역할을 수행합니다.
-  2. IDE(Static Analyzer)가 타겟 유형이 다른 데이터를 할당하려 할 때 린트 오류로 즉각 알려주어 런타임 이전에 오류를 잡을 수 있습니다.
-  ```python
-  def export_to_csv(self, filepath: str, month: Optional[str] = None) -> int:
-      ...
-  ```
-
-### 5.5 파일 저장 원자성(Atomicity) 강화
-`update`, `delete`, `category remove`, `save_budgets` 등의 갱신형 연산 시, 원본 파일에 직접 수정 쓰기를 시도하다가 전원 공급 차단 등의 하드웨어 사고가 발생해 데이터가 날아가는 현상을 완벽하게 방지합니다.
-- 임시 파일(`tempfile.mkstemp`)을 생성해 신규/정정 데이터를 우선 작성합니다.
-- 쓰기가 정상적으로 완료되면 운영체제 수준에서 제공하는 원자적 덮어쓰기 기능인 `os.replace`를 사용하여 파일 교체를 완벽하게 완료합니다.
+### 5.4 파일 저장 원자성(Atomicity) 보장
+거래 정보의 수정, 삭제, 예산 갱신 등 모든 물리 파일 디스크 갱신 과정에서 원본 파일을 직접 스트림 쓰기하지 않습니다. `tempfile`로 데이터를 임시 안전 영역에 기입한 후, 완벽히 완료된 상태에서 커널의 `os.replace` 연산으로 파일 교체를 완료하므로 예기치 않은 시스템 단절 시에도 데이터 유실이나 손상을 완벽히 방어합니다.
 
 ---
 
@@ -292,7 +232,28 @@ classDiagram
         +remove_recurring_template(str template_id) bool
         +generate_recurring_transactions(str month) int
     }
+    class InteractiveShell {
+        -BudgetService service
+        +run()
+        +parse_and_execute(str command, List~str~ args)
+        +prompt_validated_input(...) str
+        +prompt_category_interactive(...) str
+        +handle_help()
+        +handle_add()
+        +handle_list(List~str~ args)
+        +handle_search()
+        +handle_summary(List~str~ args)
+        +handle_budget()
+        +handle_category()
+        +handle_update(List~str~ args)
+        +handle_delete(List~str~ args)
+        +handle_import(List~str~ args)
+        +handle_export(List~str~ args)
+        +handle_backup()
+        +handle_recurring()
+    }
 
+    InteractiveShell --> BudgetService : uses
     BudgetService --> FileRepository : uses
     FileRepository ..> Transaction : streams/writes
     FileRepository ..> RecurringTemplate : loads/saves
@@ -300,45 +261,40 @@ classDiagram
     BudgetService ..> RecurringTemplate : creates/manages
 ```
 
-### 6.2 CLI 실행 흐름도 (Command Execution Flowchart)
+### 6.2 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
 ```mermaid
 flowchart TD
-    Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[인자 파싱 및 데이터 폴더 설정]
+    Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[글로벌 옵션 --data-dir 분석]
     ParseArgs --> InitRepo[FileRepository 초기화]
-    InitRepo --> CheckCats{카테고리 파일 존재?}
-    CheckCats -- No --> GenDefaultCats[기본 카테고리 자동 생성]
-    CheckCats -- Yes --> InitService[BudgetService 초기화]
+    InitRepo --> CheckCats{카테고리 비어있음?}
+    CheckCats -- Yes --> GenDefaultCats[기본 카테고리 9종 기입 생성]
+    CheckCats -- No --> InitService[BudgetService 및 InteractiveShell 로드]
     GenDefaultCats --> InitService
-    InitService --> RouteCmd{입력된 명령?}
+    InitService --> Welcome[웰컴 배너 출력 및 while True 셸 루프 진입]
     
-    RouteCmd -->|add| CmdAdd[대화형 입력 및 입력 검증]
-    CmdAdd --> SaveAdd[transactions.jsonl에 추가 기록]
-    SaveAdd --> SuccessAdd[생성된 ID 출력 및 종료]
+    Welcome --> Prompt[사용자 셸 입력 대기: budget_app 프롬프트]
+    Prompt --> CheckInput{입력 문자열 분석}
     
-    RouteCmd -->|list| CmdList[제너레이터 스트리밍]
-    CmdList --> SortList[크기 limit 고정 버퍼 정렬]
-    SortList --> RenderTable[한글 폭 보정 표 렌더링 출력]
+    CheckInput -->|명령어 파싱 실패| ErrCommand[알 수 없는 명령 에러 및 힌트 출력]
+    ErrCommand --> Prompt
     
-    RouteCmd -->|update/delete| CmdUpdateDelete[대화형 수정/삭제 입력]
-    CmdUpdateDelete --> AtomicWrite[임시 파일에 신규 데이터 작성]
-    AtomicWrite --> AtomicRename[os.replace 원자적 파일 교체]
-    AtomicRename --> SuccessUD[성공 메시지 출력]
+    CheckInput -->|exit 또는 quit| ExitShell[작별 배너 출력 및 루프 탈출]
+    ExitShell --> End([셸 프로세스 안전 종료])
     
-    RouteCmd -->|summary| CmdSummary[월별 지출 스트리밍 집계]
-    CmdSummary --> CheckBudget{설정된 예산 확인}
-    CheckBudget -- Yes --> CompBudget[사용률 계산 및 초과 경고 체크]
-    CheckBudget -- No --> PrintSummary[결과 출력]
-    CompBudget --> PrintSummary
+    CheckInput -->|유효한 명령어 12종| CommandRouting{명령어 핸들러 매핑}
     
-    RouteCmd -->|recurring generate| CmdRecurring[반복 내역 자동 생성]
-    CmdRecurring --> DupCheck{동일 거래 내역 유무 확인}
-    DupCheck -- No --> GenTx[신규 트랜잭션 추가 기록]
-    DupCheck -- Yes --> SkipTx[중복으로 인해 건너뜀]
+    CommandRouting -->|add / search / budget / category / update / delete / import / export / recurring| ExecInteractive[대화식 프롬프트 루프 작동]
+    CommandRouting -->|list / summary| ExecDirect[전달 인자 기반 다이렉트 처리]
+    CommandRouting -->|help / backup| ExecSystem[도움말 및 백업 압축 구동]
     
-    PrintSummary --> End([프로그램 종료])
-    SuccessAdd --> End
-    RenderTable --> End
-    SuccessUD --> End
-    GenTx --> End
-    SkipTx --> End
+    ExecInteractive --> Decorator[@catch_errors 에러 가두기 바인딩]
+    ExecDirect --> Decorator
+    ExecSystem --> Decorator
+    
+    Decorator --> CheckError{오류 발생 여부?}
+    CheckError -- Yes --> PrintErr[원인 및 해결 힌트 출력, sys.exit 생략]
+    CheckError -- No --> PrintSuccess[결과 출력 및 갱신 세이브 성공 메시지]
+    
+    PrintErr --> Prompt
+    PrintSuccess --> Prompt
 ```
