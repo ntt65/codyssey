@@ -680,8 +680,8 @@ class InteractiveShell:
         category = self.prompt_category_interactive("food")
         amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
         
-        memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
-        tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
+        memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "점심", ["점심", "저녁", "월세", "마트"])
+        tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "식대", ["식대", "생필품", "고정비", "교통"])
         tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
         
         tx_id = self.service.add_transaction(date, type_str, category, amount, memo, tags)
@@ -974,8 +974,8 @@ class InteractiveShell:
             category = self.prompt_category_interactive("food")
             amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
             day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, "25", ["25", "20", "10"]))
-            memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
-            tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
+            memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "월세", ["월세", "보험금", "기본급"])
+            tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "고정비", ["고정비", "월세", "급여"])
             tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
             
             new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)
