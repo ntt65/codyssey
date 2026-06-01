@@ -678,9 +678,9 @@ class InteractiveShell:
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         
         date = self.prompt_validated_input("- 날짜 (YYYY-MM-DD)", validate_date, today_str, [today_str])
-        type_str = self.prompt_validated_input("- 타입", validate_type, None, ["income", "expense"])
-        category = self.prompt_category_interactive()
-        amount = int(self.prompt_validated_input("- 금액", validate_amount, None, ["10000", "30000", "50000"]))
+        type_str = self.prompt_validated_input("- 타입", validate_type, "expense", ["income", "expense"])
+        category = self.prompt_category_interactive("food")
+        amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
         
         memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["점심", "저녁", "월세", "마트"])
         tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["식대", "생필품", "고정비", "교통"])
@@ -972,10 +972,10 @@ class InteractiveShell:
             
         elif choice == "2":
             print("[신규 반복 템플릿 등록]")
-            type_str = self.prompt_validated_input("- 타입", validate_type, None, ["income", "expense"])
-            category = self.prompt_category_interactive()
-            amount = int(self.prompt_validated_input("- 금액", validate_amount, None, ["10000", "30000", "50000"]))
-            day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, None, ["25", "20", "10"]))
+            type_str = self.prompt_validated_input("- 타입", validate_type, "expense", ["income", "expense"])
+            category = self.prompt_category_interactive("food")
+            amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
+            day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, "25", ["25", "20", "10"]))
             memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "", ["월세", "보험금", "기본급"])
             tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "", ["고정비", "월세", "급여"])
             tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
