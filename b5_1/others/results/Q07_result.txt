@@ -1,0 +1,13 @@
+============================================================
+Q07. 한 번도 주문한 적 없는 회원 목록 (LEFT JOIN)
+============================================================
+
+[SQL]
+SELECT m.id, m.name, m.email, m.joined_at
+FROM member m
+LEFT JOIN orders o ON m.id = o.member_id
+WHERE o.id IS NULL
+
+[결과]
+(결과 없음)
+

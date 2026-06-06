@@ -1,0 +1,25 @@
+============================================================
+Q11. 장르별 도서 수와 총 재고 현황 (COUNT + SUM + GROUP BY)
+============================================================
+
+[SQL]
+SELECT g.name AS genre,
+       COUNT(b.id)  AS book_count,
+       SUM(b.stock) AS total_stock
+FROM genre g
+INNER JOIN book b ON g.id = b.genre_id
+GROUP BY g.id, g.name
+ORDER BY book_count DESC
+
+[결과]
++---------+------------+-------------+
+| genre   | book_count | total_stock |
++---------+------------+-------------+
+| 소설      | 6          | 224         |
+| 고전문학    | 4          | 191         |
+| 판타지     | 2          | 177         |
+| 시/에세이   | 1          | 20          |
+| SF      | 1          | 49          |
+| 추리/미스터리 | 1          | 41          |
++---------+------------+-------------+
+(6 rows)

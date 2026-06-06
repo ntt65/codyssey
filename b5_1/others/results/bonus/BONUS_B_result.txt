@@ -1,0 +1,28 @@
+============================================================
+BONUS_B. [비교 B] 서브쿼리 방식 - 동일 요구, 동일 결과
+============================================================
+
+[SQL]
+SELECT id, name, email
+FROM member
+WHERE id IN (
+    SELECT DISTINCT o.member_id
+    FROM orders o
+    INNER JOIN order_item oi ON o.id = oi.order_id
+    WHERE oi.book_id = (
+        SELECT book_id
+        FROM order_item
+        GROUP BY book_id
+        ORDER BY SUM(quantity) DESC
+        LIMIT 1
+    )
+)
+
+[결과]
++----+------+---------------------+
+| id | name | email               |
++----+------+---------------------+
+| 2  | 이서연  | seoyeon@example.com |
+| 3  | 박지호  | jiho@example.com    |
++----+------+---------------------+
+(2 rows)

@@ -1,0 +1,25 @@
+============================================================
+REPORT3. 미니 리포트 3: 구매 금액 기준 상위 회원 TOP 3 (VIP)
+============================================================
+
+[SQL]
+SELECT m.name,
+       m.email,
+       COUNT(o.id)         AS order_count,
+       SUM(o.total_amount) AS lifetime_value
+FROM member m
+INNER JOIN orders o ON m.id = o.member_id
+WHERE o.status = 'completed'
+GROUP BY m.id, m.name, m.email
+ORDER BY lifetime_value DESC
+LIMIT 3
+
+[결과]
++------+---------------------+-------------+----------------+
+| name | email               | order_count | lifetime_value |
++------+---------------------+-------------+----------------+
+| 이서연  | seoyeon@example.com | 3           | 67500          |
+| 정도윤  | doyun@example.com   | 2           | 57000          |
+| 박지호  | jiho@example.com    | 2           | 55500          |
++------+---------------------+-------------+----------------+
+(3 rows)

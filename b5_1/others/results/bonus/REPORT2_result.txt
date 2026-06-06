@@ -1,0 +1,27 @@
+============================================================
+REPORT2. 미니 리포트 2: 가장 많이 팔린 도서 TOP 5
+============================================================
+
+[SQL]
+SELECT b.title,
+       a.name                           AS author,
+       SUM(oi.quantity)                 AS total_sold,
+       SUM(oi.quantity * oi.unit_price) AS total_revenue
+FROM order_item oi
+INNER JOIN book   b ON oi.book_id  = b.id
+INNER JOIN author a ON b.author_id = a.id
+GROUP BY b.id, b.title, a.name
+ORDER BY total_sold DESC
+LIMIT 5
+
+[결과]
++--------+-----------+------------+---------------+
+| title  | author    | total_sold | total_revenue |
++--------+-----------+------------+---------------+
+| 연금술사   | 파울로 코엘료   | 4          | 50000         |
+| 소년이 온다 | 한강        | 3          | 42000         |
+| 흰      | 한강        | 3          | 36000         |
+| 동물농장   | 조지 오웰     | 3          | 30000         |
+| 노인과 바다 | 어니스트 헤밍웨이 | 3          | 33000         |
++--------+-----------+------------+---------------+
+(5 rows)

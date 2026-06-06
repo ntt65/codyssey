@@ -1,0 +1,21 @@
+============================================================
+BONUS_FK. FK 제약 위반 시도 및 오류 분석
+============================================================
+
+[시도] 존재하지 않는 book_id(999)로 order_item INSERT
+[SQL] INSERT INTO order_item (order_id, book_id, quantity, unit_price) VALUES (1, 999, 1, 10000)
+
+[결과] FK 오류 발생: FOREIGN KEY constraint failed
+  → FK 제약이 정상 동작합니다.
+
+[시도] 존재하지 않는 member_id(999)로 orders INSERT
+[SQL] INSERT INTO orders (member_id, ordered_at, status, total_amount) VALUES (999, '2024-06-01 10:00:00', 'pending', 15000)
+
+[결과] FK 오류 발생: FOREIGN KEY constraint failed
+  → FK 제약이 정상 동작합니다.
+
+── 분석 ────────────────────────────────────────────
+PRAGMA foreign_keys = ON 설정 시 SQLite는 참조 무결성을 강제한다.
+부모 테이블에 없는 PK를 FK로 지정하면 INSERT가 거부된다.
+수정 방법: 먼저 부모 테이블에 해당 행을 추가하거나
+           존재하는 PK 값을 사용한다.

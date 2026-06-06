@@ -1,0 +1,25 @@
+============================================================
+BONUS_A. [비교 A] JOIN 방식 - 가장 많이 팔린 도서를 구매한 회원 목록
+============================================================
+
+[SQL]
+SELECT DISTINCT m.id, m.name, m.email
+FROM member m
+INNER JOIN orders     o  ON m.id  = o.member_id
+INNER JOIN order_item oi ON o.id  = oi.order_id
+WHERE oi.book_id = (
+    SELECT book_id
+    FROM order_item
+    GROUP BY book_id
+    ORDER BY SUM(quantity) DESC
+    LIMIT 1
+)
+
+[결과]
++----+------+---------------------+
+| id | name | email               |
++----+------+---------------------+
+| 3  | 박지호  | jiho@example.com    |
+| 2  | 이서연  | seoyeon@example.com |
++----+------+---------------------+
+(2 rows)

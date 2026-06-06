@@ -1,0 +1,31 @@
+============================================================
+Q09. 회원별 완료 주문 건수와 총 결제금액 집계 (COUNT + SUM + GROUP BY)
+============================================================
+
+[SQL]
+SELECT m.name AS member,
+       COUNT(o.id)         AS order_count,
+       SUM(o.total_amount) AS total_spent
+FROM member m
+INNER JOIN orders o ON m.id = o.member_id
+WHERE o.status = 'completed'
+GROUP BY m.id, m.name
+ORDER BY total_spent DESC
+
+[결과]
++--------+-------------+-------------+
+| member | order_count | total_spent |
++--------+-------------+-------------+
+| 이서연    | 3           | 67500       |
+| 정도윤    | 2           | 57000       |
+| 박지호    | 2           | 55500       |
+| 최수아    | 2           | 52500       |
+| 김민준    | 2           | 50000       |
+| 류준혁    | 1           | 37000       |
+| 강하은    | 1           | 34000       |
+| 한승우    | 1           | 27500       |
+| 윤서준    | 1           | 24000       |
+| 오채원    | 1           | 15000       |
+| 임지아    | 1           | 14500       |
++--------+-------------+-------------+
+(11 rows)
