@@ -30,10 +30,43 @@ def pdf_to_images(pdf_path):
         print(f"saved {outfile.name}")
 
 
+def split_page(img_path, out_dir):
+    img = cv2.imread(str(img_path))
+
+    h, w = img.shape[:2]
+
+    # 가로가 세로보다 훨씬 크면 펼침면으로 판단
+    if w > h * 1.2:
+
+        center = w // 2
+
+        left = img[:, :center]
+        right = img[:, center:]
+
+        cv2.imwrite(
+            str(out_dir / f"{img_path.stem}_L.png"),
+            left
+        )
+
+        cv2.imwrite(
+            str(out_dir / f"{img_path.stem}_R.png"),
+            right
+        )
+
+        print(f"split: {img_path.name}")
+
+    else:
+        cv2.imwrite(
+            str(out_dir / img_path.name),
+            img
+        )
+
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     pdfs = list(INPUT_DIR.glob("*.pdf"))
+    split_dir = book_dir / "split"
+    split_dir.mkdir(exist_ok=True)
 
     if not pdfs:
         print("input 폴더에 PDF가 없습니다.")
