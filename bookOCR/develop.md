@@ -614,3 +614,448 @@ left_page
 
 지금 보여준 결과를 보면 분할 버그는 거의 해결됐고, 다음 목표는 "페이지 내용만 남기기" 단계입니다.
 ---------------------------
+
+좋습니다. 현재 상태를 기준으로 보면 개발 단계는:
+
+```text
+V0.1 PDF → PNG
+V0.2 이미지 전처리
+V0.3 중앙 고정 분할
+V0.4 페이지 내용만 남기기 (Auto Crop)
+```
+
+가 적당합니다.
+
+---
+
+# V0.4 목표
+
+현재 결과
+
+```text
++--------------------+
+|      본문          |
+|                    |
+|      본문          |
+|                    |
+|       여백         |
++--------------------+
+```
+
+를
+
+```text
++--------------+
+|    본문      |
+|              |
+|    본문      |
++--------------+
+```
+
+로 만드는 것입니다.
+
+---
+
+# 코드 상단 주석 규칙
+
+앞으로는 항상 이렇게 시작하면 됩니다.
+
+```python
+# ==========================================================
+# Book OCR Program
+#
+# Version : V0.4
+# Date    : 2026-06-09 21:00
+#
+# Change Log
+# V0.1 PDF -> PNG 변환
+# V0.2 OCR 전처리(CLAHE, Threshold)
+# V0.3 중앙 고정 분할
+# V0.4 페이지 여백 자동 제거(Auto Crop)
+# ==========================================================
+```
+
+---
+
+# V0.4 추가 함수
+
+전처리 후 페이지에서 실제 글자가 있는 영역만 남깁니다.
+
+```python
+def crop_margin(img):
+
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img.copy()
+
+    # 검은 글자 찾기
+    coords = cv2.findNonZero(255 - gray)
+
+    if coords is None:
+        return img
+
+    x, y, w, h = cv2.boundingRect(coords)
+
+    # 안전 여백
+    pad = 20
+
+    x = max(0, x - pad)
+    y = max(0, y - pad)
+
+    w = min(img.shape[1] - x, w + pad * 2)
+    h = min(img.shape[0] - y, h + pad * 2)
+
+    cropped = img[y:y+h, x:x+w]
+
+    return cropped
+```
+
+---
+
+# split_page 수정
+
+현재
+
+```python
+left = img[:, :center]
+right = img[:, center:]
+```
+
+뒤에 추가
+
+```python
+left = crop_margin(left)
+right = crop_margin(right)
+```
+
+즉
+
+```python
+center = w // 2
+
+left = img[:, :center]
+right = img[:, center:]
+
+left = crop_margin(left)
+right = crop_margin(right)
+```
+
+---
+
+# 기대 효과
+
+현재 이미지 기준
+
+왼쪽 페이지
+
+```text
+392 페이지
+██████████████████░░░░░░░░░
+```
+
+↓
+
+```text
+392 페이지
+██████████████████
+```
+
+오른쪽 페이지
+
+```text
+░░░░░░░██████████████
+```
+
+↓
+
+```text
+██████████████
+```
+
+---
+
+# 다음 버전 계획
+
+```text
+V0.4 Auto Crop
+↓
+V0.5 Deskew (기울기 보정)
+↓
+V0.6 OCR
+↓
+V0.7 OCR 결과 txt 저장
+↓
+V0.8 PDF 재생성
+```
+
+지금 첨부한 샘플을 보면 V0.4만 적용해도 OCR 입력 이미지 크기가 20~40% 정도 줄어들고 글자 밀도가 높아져서 인식률이 꽤 좋아질 가능성이 있습니다.
+
+--------------
+좋습니다. V0.4에서는 **중앙 고정 분할 + 자동 여백 제거(Auto Crop)** 까지 포함한 전체 코드로 관리하면 됩니다.
+
+```python
+# ==========================================================
+# Book OCR Program
+#
+# Version : V0.4
+# Date    : 2026-06-09 21:00
+#
+# Change Log
+# V0.1 PDF -> PNG 변환
+# V0.2 OCR 전처리(CLAHE, Adaptive Threshold)
+# V0.3 중앙 고정 분할
+# V0.4 페이지 여백 자동 제거(Auto Crop)
+# ==========================================================
+
+from pathlib import Path
+import fitz
+import cv2
+import numpy as np
+
+INPUT_DIR = Path("input")
+OUTPUT_DIR = Path("output")
+
+
+# ----------------------------------------------------------
+# PDF -> PNG
+# ----------------------------------------------------------
+def pdf_to_images(pdf_path, pages_dir):
+
+    doc = fitz.open(pdf_path)
+
+    print(f"\n[{pdf_path.name}] pages={len(doc)}")
+
+    for i in range(len(doc)):
+
+        page = doc[i]
+
+        pix = page.get_pixmap(
+            matrix=fitz.Matrix(2.5, 2.5),
+            alpha=False
+        )
+
+        out_file = pages_dir / f"page_{i+1:04d}.png"
+
+        pix.save(out_file)
+
+        print(f"saved : {out_file.name}")
+
+
+# ----------------------------------------------------------
+# OCR 전처리
+# ----------------------------------------------------------
+def preprocess_image(img):
+
+    gray = cv2.cvtColor(
+        img,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    clahe = cv2.createCLAHE(
+        clipLimit=2.0,
+        tileGridSize=(8, 8)
+    )
+
+    gray = clahe.apply(gray)
+
+    gray = cv2.GaussianBlur(
+        gray,
+        (3, 3),
+        0
+    )
+
+    bw = cv2.adaptiveThreshold(
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        25,
+        15
+    )
+
+    return bw
+
+
+# ----------------------------------------------------------
+# 페이지 여백 제거
+# ----------------------------------------------------------
+def crop_margin(img):
+
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(
+            img,
+            cv2.COLOR_BGR2GRAY
+        )
+    else:
+        gray = img.copy()
+
+    # 검은 영역 찾기
+    coords = cv2.findNonZero(
+        255 - gray
+    )
+
+    if coords is None:
+        return img
+
+    x, y, w, h = cv2.boundingRect(coords)
+
+    pad = 20
+
+    x = max(0, x - pad)
+    y = max(0, y - pad)
+
+    w = min(
+        img.shape[1] - x,
+        w + pad * 2
+    )
+
+    h = min(
+        img.shape[0] - y,
+        h + pad * 2
+    )
+
+    cropped = img[
+        y:y+h,
+        x:x+w
+    ]
+
+    return cropped
+
+
+# ----------------------------------------------------------
+# 좌우 페이지 분리
+# ----------------------------------------------------------
+def split_page(img, split_dir, stem):
+
+    h, w = img.shape[:2]
+
+    # 단일 페이지
+    if w < h * 1.2:
+
+        cropped = crop_margin(img)
+
+        cv2.imwrite(
+            str(split_dir / f"{stem}.png"),
+            cropped
+        )
+
+        return
+
+    center = w // 2
+
+    left = img[:, :center]
+    right = img[:, center:]
+
+    # 여백 제거
+    left = crop_margin(left)
+    right = crop_margin(right)
+
+    cv2.imwrite(
+        str(split_dir / f"{stem}_L.png"),
+        left
+    )
+
+    cv2.imwrite(
+        str(split_dir / f"{stem}_R.png"),
+        right
+    )
+
+
+# ----------------------------------------------------------
+# 책 처리
+# ----------------------------------------------------------
+def process_book(pdf_path):
+
+    book_dir = OUTPUT_DIR / pdf_path.stem
+
+    pages_dir = book_dir / "pages"
+    clean_dir = book_dir / "clean"
+    split_dir = book_dir / "split"
+
+    pages_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    clean_dir.mkdir(
+        exist_ok=True
+    )
+
+    split_dir.mkdir(
+        exist_ok=True
+    )
+
+    pdf_to_images(
+        pdf_path,
+        pages_dir
+    )
+
+    for page_file in sorted(
+        pages_dir.glob("*.png")
+    ):
+
+        img = cv2.imread(
+            str(page_file)
+        )
+
+        if img is None:
+            continue
+
+        cleaned = preprocess_image(img)
+
+        cv2.imwrite(
+            str(clean_dir / page_file.name),
+            cleaned
+        )
+
+        split_page(
+            cleaned,
+            split_dir,
+            page_file.stem
+        )
+
+        print(
+            f"processed : {page_file.name}"
+        )
+
+
+# ----------------------------------------------------------
+# Main
+# ----------------------------------------------------------
+def main():
+
+    OUTPUT_DIR.mkdir(
+        exist_ok=True
+    )
+
+    pdfs = list(
+        INPUT_DIR.glob("*.pdf")
+    )
+
+    if not pdfs:
+        print("input 폴더에 PDF가 없습니다.")
+        return
+
+    for pdf in pdfs:
+        process_book(pdf)
+
+    print("\n=== 완료 ===")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+다만 네가 올린 샘플 이미지를 다시 보니 V0.4의 `crop_margin()`은 한 가지 문제가 생길 수 있다.
+
+현재 페이지 가장자리에 있는 검은 책등 그림자와 스캔 테두리도 "글자"로 인식해서 잘라내기 범위에 포함될 가능성이 높다. 그래서 다음 버전인 **V0.5**에서는 단순 Bounding Box 대신:
+
+1. 가장자리 3~5% 제거
+2. 작은 잡음 제거(Morphology Open)
+3. 본문 영역 Contour 검출
+4. 기울기 보정(Deskew)
+
+을 넣는 것이 좋다.
+
+네가 올린 샘플 형태의 기출문제집이라면 OCR 정확도 향상 폭은 V0.4보다 V0.5가 더 클 것으로 보인다.
