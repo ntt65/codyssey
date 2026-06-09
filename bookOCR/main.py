@@ -1,3 +1,16 @@
+# 핵심 변경점
+
+# 삭제:
+# def find_gutter(...)
+
+# 삭제:
+# gutter = find_gutter(img)
+
+# 변경:
+# center = w // 2
+# left = img[:, :center]
+# right = img[:, center:]
+
 from pathlib import Path
 import fitz
 import cv2
@@ -58,51 +71,35 @@ def preprocess_image(img):
 
 
 # -------------------------
-# 중앙 골(gutter) 찾기
-# -------------------------
-def find_gutter(img):
-
-    if len(img.shape) == 3:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = img
-
-    h, w = gray.shape
-    center = w // 2
-
-    search = int(w * 0.2)
-
-    start = max(0, center - search)
-    end = min(w, center + search)
-
-    roi = gray[:, start:end]
-
-    hist = np.mean(roi, axis=0)
-
-    gutter = np.argmin(hist)
-
-    return start + gutter
-
-
-# -------------------------
 # 좌우 분리
+# 책은 항상 펼친 2페이지라고 가정
 # -------------------------
 def split_page(img, split_dir, stem):
 
     h, w = img.shape[:2]
 
-    # 단일 페이지
+    # 세로 페이지는 분리 안함
     if w < h * 1.2:
-        cv2.imwrite(str(split_dir / f"{stem}.png"), img)
+        cv2.imwrite(
+            str(split_dir / f"{stem}.png"),
+            img
+        )
         return
 
-    gutter = find_gutter(img)
+    center = w // 2
 
-    left = img[:, :gutter]
-    right = img[:, gutter:]
+    left = img[:, :center]
+    right = img[:, center:]
 
-    cv2.imwrite(str(split_dir / f"{stem}_L.png"), left)
-    cv2.imwrite(str(split_dir / f"{stem}_R.png"), right)
+    cv2.imwrite(
+        str(split_dir / f"{stem}_L.png"),
+        left
+    )
+
+    cv2.imwrite(
+        str(split_dir / f"{stem}_R.png"),
+        right
+    )
 
 
 # -------------------------
@@ -116,23 +113,48 @@ def process_book(pdf_path):
     clean_dir = book_dir / "clean"
     split_dir = book_dir / "split"
 
-    pages_dir.mkdir(parents=True, exist_ok=True)
-    clean_dir.mkdir(exist_ok=True)
-    split_dir.mkdir(exist_ok=True)
+    pages_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    pdf_to_images(pdf_path, pages_dir)
+    clean_dir.mkdir(
+        exist_ok=True
+    )
 
-    for page_file in sorted(pages_dir.glob("*.png")):
+    split_dir.mkdir(
+        exist_ok=True
+    )
 
-        img = cv2.imread(str(page_file))
+    pdf_to_images(
+        pdf_path,
+        pages_dir
+    )
+
+    for page_file in sorted(
+        pages_dir.glob("*.png")
+    ):
+
+        img = cv2.imread(
+            str(page_file)
+        )
 
         cleaned = preprocess_image(img)
 
-        cv2.imwrite(str(clean_dir / page_file.name), cleaned)
+        cv2.imwrite(
+            str(clean_dir / page_file.name),
+            cleaned
+        )
 
-        split_page(cleaned, split_dir, page_file.stem)
+        split_page(
+            cleaned,
+            split_dir,
+            page_file.stem
+        )
 
-        print(f"processed {page_file.name}")
+        print(
+            f"processed {page_file.name}"
+        )
 
 
 # -------------------------
@@ -140,9 +162,13 @@ def process_book(pdf_path):
 # -------------------------
 def main():
 
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(
+        exist_ok=True
+    )
 
-    pdfs = list(INPUT_DIR.glob("*.pdf"))
+    pdfs = list(
+        INPUT_DIR.glob("*.pdf")
+    )
 
     if not pdfs:
         print("input 폴더에 PDF 없음")
