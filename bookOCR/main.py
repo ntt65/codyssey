@@ -1,14 +1,17 @@
 # ==========================================================
 # Book OCR Program
 #
-# Version : V0.4
-# Date    : 2026-06-09 21:00
+# Version : V0.5
+# Date    : 2026-06-09 21:30
 #
 # Change Log
 # V0.1 PDF -> PNG 변환
 # V0.2 OCR 전처리(CLAHE, Adaptive Threshold)
 # V0.3 중앙 고정 분할
 # V0.4 페이지 여백 자동 제거(Auto Crop)
+# V0.5 전처리 순서 변경
+#      Split -> Crop -> Threshold
+#      페이지 외곽 제거 추가
 # ==========================================================
 
 from pathlib import Path
@@ -46,14 +49,98 @@ def pdf_to_images(pdf_path, pages_dir):
 
 
 # ----------------------------------------------------------
+# 페이지 외곽 제거
+# ----------------------------------------------------------
+def trim_page_edges(img):
+
+    h, w = img.shape[:2]
+
+    left = int(w * 0.03)
+    right = int(w * 0.03)
+
+    top = int(h * 0.02)
+    bottom = int(h * 0.05)
+
+    return img[
+        top:h-bottom,
+        left:w-right
+    ]
+
+
+# ----------------------------------------------------------
+# 본문 영역 찾기
+# ----------------------------------------------------------
+def crop_content(img):
+
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(
+            img,
+            cv2.COLOR_BGR2GRAY
+        )
+    else:
+        gray = img.copy()
+
+    blur = cv2.GaussianBlur(
+        gray,
+        (5, 5),
+        0
+    )
+
+    _, mask = cv2.threshold(
+        blur,
+        220,
+        255,
+        cv2.THRESH_BINARY_INV
+    )
+
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (15, 15)
+    )
+
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_CLOSE,
+        kernel
+    )
+
+    coords = cv2.findNonZero(mask)
+
+    if coords is None:
+        return img
+
+    x, y, w, h = cv2.boundingRect(coords)
+
+    pad = 20
+
+    x = max(0, x - pad)
+    y = max(0, y - pad)
+
+    w = min(
+        gray.shape[1] - x,
+        w + pad * 2
+    )
+
+    h = min(
+        gray.shape[0] - y,
+        h + pad * 2
+    )
+
+    return img[y:y+h, x:x+w]
+
+
+# ----------------------------------------------------------
 # OCR 전처리
 # ----------------------------------------------------------
-def preprocess_image(img):
+def preprocess_for_ocr(img):
 
-    gray = cv2.cvtColor(
-        img,
-        cv2.COLOR_BGR2GRAY
-    )
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(
+            img,
+            cv2.COLOR_BGR2GRAY
+        )
+    else:
+        gray = img.copy()
 
     clahe = cv2.createCLAHE(
         clipLimit=2.0,
@@ -61,12 +148,6 @@ def preprocess_image(img):
     )
 
     gray = clahe.apply(gray)
-
-    gray = cv2.GaussianBlur(
-        gray,
-        (3, 3),
-        0
-    )
 
     bw = cv2.adaptiveThreshold(
         gray,
@@ -81,66 +162,34 @@ def preprocess_image(img):
 
 
 # ----------------------------------------------------------
-# 페이지 여백 제거
+# 페이지 저장
 # ----------------------------------------------------------
-def crop_margin(img):
+def save_page(page_img, out_path):
 
-    if len(img.shape) == 3:
-        gray = cv2.cvtColor(
-            img,
-            cv2.COLOR_BGR2GRAY
-        )
-    else:
-        gray = img.copy()
+    page_img = trim_page_edges(page_img)
 
-    # 검은 영역 찾기
-    coords = cv2.findNonZero(
-        255 - gray
+    page_img = crop_content(page_img)
+
+    ocr_img = preprocess_for_ocr(page_img)
+
+    cv2.imwrite(
+        str(out_path),
+        ocr_img
     )
-
-    if coords is None:
-        return img
-
-    x, y, w, h = cv2.boundingRect(coords)
-
-    pad = 20
-
-    x = max(0, x - pad)
-    y = max(0, y - pad)
-
-    w = min(
-        img.shape[1] - x,
-        w + pad * 2
-    )
-
-    h = min(
-        img.shape[0] - y,
-        h + pad * 2
-    )
-
-    cropped = img[
-        y:y+h,
-        x:x+w
-    ]
-
-    return cropped
 
 
 # ----------------------------------------------------------
-# 좌우 페이지 분리
+# 좌우 분리
 # ----------------------------------------------------------
 def split_page(img, split_dir, stem):
 
     h, w = img.shape[:2]
 
-    # 단일 페이지
     if w < h * 1.2:
 
-        cropped = crop_margin(img)
-
-        cv2.imwrite(
-            str(split_dir / f"{stem}.png"),
-            cropped
+        save_page(
+            img,
+            split_dir / f"{stem}.png"
         )
 
         return
@@ -150,18 +199,14 @@ def split_page(img, split_dir, stem):
     left = img[:, :center]
     right = img[:, center:]
 
-    # 여백 제거
-    left = crop_margin(left)
-    right = crop_margin(right)
-
-    cv2.imwrite(
-        str(split_dir / f"{stem}_L.png"),
-        left
+    save_page(
+        left,
+        split_dir / f"{stem}_L.png"
     )
 
-    cv2.imwrite(
-        str(split_dir / f"{stem}_R.png"),
-        right
+    save_page(
+        right,
+        split_dir / f"{stem}_R.png"
     )
 
 
@@ -173,15 +218,10 @@ def process_book(pdf_path):
     book_dir = OUTPUT_DIR / pdf_path.stem
 
     pages_dir = book_dir / "pages"
-    clean_dir = book_dir / "clean"
     split_dir = book_dir / "split"
 
     pages_dir.mkdir(
         parents=True,
-        exist_ok=True
-    )
-
-    clean_dir.mkdir(
         exist_ok=True
     )
 
@@ -205,15 +245,8 @@ def process_book(pdf_path):
         if img is None:
             continue
 
-        cleaned = preprocess_image(img)
-
-        cv2.imwrite(
-            str(clean_dir / page_file.name),
-            cleaned
-        )
-
         split_page(
-            cleaned,
+            img,
             split_dir,
             page_file.stem
         )
