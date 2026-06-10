@@ -287,7 +287,7 @@ flowchart TD
     CommandRouting -->|list / summary| ExecDirect[전달 인자 기반 다이렉트 처리]
     CommandRouting -->|help / backup| ExecSystem[도움말 및 백업 압축 구동]
     
-    ExecInteractive --> Decorator[@catch_errors 에러 가두기 바인딩]
+    ExecInteractive --> Decorator["@catch_errors 에러 가두기 바인딩"]
     ExecDirect --> Decorator
     ExecSystem --> Decorator
     
