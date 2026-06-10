@@ -277,57 +277,122 @@ classDiagram
 ### 6.2 가계부 앱 초기 실행부터 프롬프트 대기까지의 5단계 흐름
 
 ```mermaid
+%%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
-    Start([프로그램 실행: python3 -m budget_app]) --> Step1[1단계: argparse 인자 파싱 및 데이터 폴더 설정]
-    Step1 --> Step2_1[2단계: FileRepository 저장소 객체 초기화]
-    Step2_1 --> Step2_2{카테고리 파일 비어있음?}
-    Step2_2 -- Yes --> Step2_3[9종 기본 카테고리 자동 생성 및 기입]
-    Step2_2 -- No --> Step3
-    Step2_3 --> Step3
+    subgraph Main ["__main__.py (진입점)"]
+        Start([프로그램 실행: python3 -m budget_app]) --> Step1[1단계: argparse 인자 파싱 및 데이터 폴더 설정]
+    end
     
-    Step3[3단계: BudgetService 비즈니스 로직 초기화 및 의존성 주입] --> Step4[4단계: InteractiveShell 셸 환경 세팅 및 탭 자동완성 연동]
-    Step4 --> Step5[5단계: shell.run() 호출 및 웰컴 배너 출력]
-    Step5 --> Prompt([무한 루프 진입: budget_app> 프롬프트 대기])
+    subgraph Repo ["repository.py (FileRepository)"]
+        Step1 --> Step2_1[2단계: FileRepository 저장소 객체 초기화]
+        Step2_1 --> Step2_2{카테고리 파일 비어있음?}
+        Step2_2 -- Yes --> Step2_3[9종 기본 카테고리 자동 생성 및 기입]
+    end
+    
+    subgraph Service ["service.py (BudgetService)"]
+        Step2_2 -- No --> Step3[3단계: BudgetService 비즈니스 로직 초기화 및 의존성 주입]
+        Step2_3 --> Step3
+    end
+    
+    subgraph CLI ["cli.py (InteractiveShell)"]
+        Step3 --> Step4[4단계: InteractiveShell 셸 환경 세팅 및 탭 자동완성 연동]
+        Step4 --> Step5["5단계: shell.run() 호출 및 웰컴 배너 출력"]
+        Step5 --> Prompt(["무한 루프 진입: budget_app> 프롬프트 대기"])
+    end
 ```
 
-### 6.3 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
+### 6.3 셸 무한 루프 및 명령어 실행 흐름도 (Command Execution Loop Flowchart)
 
 ```mermaid
 %%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
-    Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[글로벌 옵션 --data-dir 분석]
-    ParseArgs --> InitRepo[FileRepository 초기화]
-    InitRepo --> CheckCats{카테고리 비어있음?}
-    CheckCats -- Yes --> GenDefaultCats[기본 카테고리 9종 기입 생성]
-    CheckCats -- No --> InitService[BudgetService 및 InteractiveShell 로드]
-    GenDefaultCats --> InitService
-    InitService --> Welcome[웰컴 배너 출력 및 while True 셸 루프 진입]
+    subgraph CLI ["cli.py (InteractiveShell)"]
+        Prompt(["budget_app> 프롬프트 대기 (영문 키보드 자동 전환)"]) --> GetInput[사용자 명령어 입력 받기]
+        GetInput --> CheckEmpty{입력값이 비어있는가?}
+        CheckEmpty -- Yes --> Prompt
+        CheckEmpty -- No --> ParseInput[명령어 및 인자 파싱]
+        
+        ParseInput --> CheckCommand{명령어 판단}
+        
+        CheckCommand -->|exit / quit / EOF| ExitShell[작별 배너 출력 및 루프 탈출]
+        ExitShell --> End([프로그램 안전 종료])
+        
+        CheckCommand -->|알 수 없는 명령어| ErrCommand[오류 안내 및 help 명령어 힌트 출력]
+        ErrCommand --> Prompt
+    end
     
-    Welcome --> Prompt[사용자 셸 입력 대기: budget_app 프롬프트]
-    Prompt --> CheckInput{입력 문자열 분석}
+    subgraph Decorators ["decorators.py (Aspect)"]
+        CheckCommand -->|유효한 명령어 12종| Decorator["@catch_errors 데코레이터 진입"]
+        
+        PrintErr[원인 및 해결 힌트 출력, 셸 복원] --> Prompt
+    end
     
-    CheckInput -->|명령어 파싱 실패| ErrCommand[알 수 없는 명령 에러 및 힌트 출력]
-    ErrCommand --> Prompt
+    subgraph Service ["service.py (BudgetService)"]
+        Decorator --> ExecCommand[해당 비즈니스 로직 / 서비스 메서드 실행]
+    end
     
-    CheckInput -->|exit 또는 quit| ExitShell[작별 배너 출력 및 루프 탈출]
-    ExitShell --> End([셸 프로세스 안전 종료])
+    subgraph CLI_Exec ["cli.py (InteractiveShell 실행 및 예외 포착)"]
+        ExecCommand --> CheckStatus{오류/인터럽트 발생?}
+        
+        CheckStatus -- KeyboardInterrupt (Ctrl+C) --> CancelInput[입력 취소 안내 출력]
+        CancelInput --> Prompt
+        
+        CheckStatus -- 예외 발생 (에러 감지) --> PrintErr
+        
+        CheckStatus -- 정상 수행 완료 --> SaveAndShow[갱신 데이터 저장 및 결과 테이블 출력]
+        SaveAndShow --> Prompt
+    end
+```
+
+### 6.4 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
+
+```mermaid
+%%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
+flowchart TD
+    subgraph Main ["__main__.py (진입점)"]
+        Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[글로벌 옵션 --data-dir 분석]
+    end
     
-    CheckInput -->|유효한 명령어 12종| CommandRouting{명령어 핸들러 매핑}
+    subgraph Repo ["repository.py (FileRepository)"]
+        ParseArgs --> InitRepo[FileRepository 초기화]
+        InitRepo --> CheckCats{카테고리 비어있음?}
+        CheckCats -- Yes --> GenDefaultCats[기본 카테고리 9종 기입 생성]
+    end
     
-    CommandRouting -->|add / search / budget / category / update / delete / import / export / recurring| ExecInteractive[대화식 프롬프트 루프 작동]
-    CommandRouting -->|list / summary| ExecDirect[전달 인자 기반 다이렉트 처리]
-    CommandRouting -->|help / backup| ExecSystem[도움말 및 백업 압축 구동]
+    subgraph Service ["service.py (BudgetService)"]
+        CheckCats -- No --> InitService[BudgetService 및 InteractiveShell 로드]
+        GenDefaultCats --> InitService
+    end
     
-    ExecInteractive --> Decorator["@catch_errors 에러 가두기 바인딩"]
-    ExecDirect --> Decorator
-    ExecSystem --> Decorator
+    subgraph CLI ["cli.py (InteractiveShell)"]
+        InitService --> Welcome[웰컴 배너 출력 및 while True 셸 루프 진입]
+        
+        Welcome --> Prompt[사용자 셸 입력 대기: budget_app 프롬프트]
+        Prompt --> CheckInput{입력 문자열 분석}
+        
+        CheckInput -->|명령어 파싱 실패| ErrCommand[알 수 없는 명령 에러 및 힌트 출력]
+        ErrCommand --> Prompt
+        
+        CheckInput -->|exit 또는 quit| ExitShell[작별 배너 출력 및 루프 탈출]
+        ExitShell --> End([셸 프로세스 안전 종료])
+        
+        CheckInput -->|유효한 명령어 12종| CommandRouting{명령어 핸들러 매핑}
+    end
     
-    Decorator --> CheckError{오류 발생 여부?}
-    CheckError -- Yes --> PrintErr[원인 및 해결 힌트 출력, sys.exit 생략]
-    CheckError -- No --> PrintSuccess[결과 출력 및 갱신 세이브 성공 메시지]
+    subgraph Decorators ["decorators.py (Aspect)"]
+        CommandRouting --> Decorator["@catch_errors 데코레이터 적용"]
+        Decorator --> Exec["명령어 핸들러 실행 (대화식 / 다이렉트 / 시스템)"]
+        
+        Exec --> CheckError{오류 발생 여부?}
+        CheckError -- Yes --> PrintErr[원인 및 해결 힌트 출력, sys.exit 생략]
+    end
     
-    PrintErr --> Prompt
-    PrintSuccess --> Prompt
+    subgraph CLI_Loop ["cli.py (출력 및 세이브)"]
+        CheckError -- No --> PrintSuccess[결과 출력 및 갱신 세이브 성공 메시지]
+        
+        PrintErr --> Prompt
+        PrintSuccess --> Prompt
+    end
 ```
 
 ---
