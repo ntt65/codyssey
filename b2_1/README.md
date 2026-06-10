@@ -152,10 +152,23 @@ budget_app> category
 ## 5. 설계 및 기술적 특징 분석
 
 ### 5.1 계층 구조 설계 (Layered Architecture) 및 책임 분리
-- **모델 (`models.py`)**: `dataclass`를 사용하여 `Transaction` 및 `RecurringTemplate`의 순수 스키마 정의.
-- **저장소 (`repository.py`)**: 파일 시스템 CRUD 캡슐화 및 원자적 파일 교체 전략 수행.
-- **서비스 (`service.py`)**: 핵심 계산 로직, CSV 로더, 중복 감지, 백업 집계 등 독립된 비즈니스 룰 전담.
-- **CLI (`cli.py`, `__main__.py`)**: 대화형 셸 주 루프 가동, 예외 복원 셸 컨텍스트 제어, 한글 보정 정렬 출력.
+
+- **[models.py](budget_app/models.py)**
+  - **[Transaction](budget_app/models.py)** : 개별 수입/지출 내역의 데이터 구조(`dataclass`) 및 딕셔너리 직렬화/역직렬화 처리
+  - **[RecurringTemplate](budget_app/models.py)** : 고정/반복 거래 설정 데이터 구조(`dataclass`) 정의
+- **[repository.py](budget_app/repository.py)**
+  - **[FileRepository](budget_app/repository.py)** : 로컬 파일 시스템 CRUD 제어, 데이터 스트리밍 및 원자적(Atomic) 파일 교체 전략 수행
+- **[service.py](budget_app/service.py)**
+  - **[BudgetService](budget_app/service.py)** : 필터링/정렬 버퍼 연산, 소비율 집계, CSV 변환(Import/Export), 백업 압축, 반복 거래 일괄 생성 등 비즈니스 로직 전담
+- **[cli.py](budget_app/cli.py)**
+  - **[InteractiveShell](budget_app/cli.py)** : 셸 명령어 분석 및 대화식 입력 프롬프트 제어, 자동완성 제공, 한글 정렬 기반 결과 테이블 시각화
+- **[__main__.py](budget_app/__main__.py)**
+  - entry point : 글로벌 명령어 라인 옵션 분석 및 데이터 계층부터 UI 계층까지의 의존성(Repository ➔ Service ➔ Shell) 주입 및 앱 실행
+- **[decorators.py](budget_app/decorators.py)**
+  - decorator : 동작 로깅(`@log_action`), 소요 시간 정밀 기록(`@measure_time`), 에러 가두기 및 자동 복구(`@catch_errors`) 구현
+
+
+
 
 ### 5.2 제너레이터(Generator) 기반 파일 스트리밍 처리
 대용량 파일에서 메모리 잠식을 피하기 위해 `yield`를 사용해 파일 라인을 실시간으로 한 줄씩만 로드합니다. `list` 및 `search` 결과 정렬 시에도 파일 내 전체 데이터를 메모리에 올리지 않고 **최대 `limit` 크기로 크기가 제한된 정렬 삽입 버퍼**를 활용하여 $O(\text{limit})$의 매우 제한적인 메모리 자원으로 실시간 조회 정렬을 이행합니다.
@@ -263,6 +276,7 @@ classDiagram
 
 ### 6.2 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
 ```mermaid
+%%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
     Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[글로벌 옵션 --data-dir 분석]
     ParseArgs --> InitRepo[FileRepository 초기화]
