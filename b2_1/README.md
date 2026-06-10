@@ -274,7 +274,24 @@ classDiagram
     BudgetService ..> RecurringTemplate : creates/manages
 ```
 
-### 6.2 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
+### 6.2 가계부 앱 초기 실행부터 프롬프트 대기까지의 5단계 흐름
+
+```mermaid
+flowchart TD
+    Start([프로그램 실행: python3 -m budget_app]) --> Step1[1단계: argparse 인자 파싱 및 데이터 폴더 설정]
+    Step1 --> Step2_1[2단계: FileRepository 저장소 객체 초기화]
+    Step2_1 --> Step2_2{카테고리 파일 비어있음?}
+    Step2_2 -- Yes --> Step2_3[9종 기본 카테고리 자동 생성 및 기입]
+    Step2_2 -- No --> Step3
+    Step2_3 --> Step3
+    
+    Step3[3단계: BudgetService 비즈니스 로직 초기화 및 의존성 주입] --> Step4[4단계: InteractiveShell 셸 환경 세팅 및 탭 자동완성 연동]
+    Step4 --> Step5[5단계: shell.run() 호출 및 웰컴 배너 출력]
+    Step5 --> Prompt([무한 루프 진입: budget_app> 프롬프트 대기])
+```
+
+### 6.3 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
+
 ```mermaid
 %%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
