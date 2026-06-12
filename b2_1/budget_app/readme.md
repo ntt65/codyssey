@@ -49,8 +49,8 @@
 | 파일명 | 기능 및 역할 |
 | :--- | :--- |
 | [models.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/models.py) | `Transaction`, `RecurringTemplate` 등의 데이터 규격 정의 및 직렬화/역직렬화 구현 |
-| [repository.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/repository.py) | JSONL 파일 CRUD, 제너레이터 스트리밍, ID 채번 및 원자적 쓰기(Atomic Write) 구현 |
-| [service.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/service.py) | 데이터 검증, 예산 대비 소모율 계산, 중복 검사, 백업 압축 등 비즈니스 로직 처리 |
+| [repository.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/repository.py) | JSONL 파일 CRUD, 제너레이터 스트리밍, ID 채번, 반복 거래 템플릿 로드/저장 및 원자적 쓰기(Atomic Write) 구현 |
+| [service.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/service.py) | 데이터 검증 및 CSV 가져오기 검증 공통화, 예산 대비 소모율 계산, 중복 검사, 백업 압축 등 비즈니스 로직 처리 |
 | [decorators.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/decorators.py) | CLI 경계 예외 처리(`@catch_errors`), 시간 측정(`@measure_time`), 작업 로깅(`@log_action`) 데코레이터 |
 | [cli.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/cli.py) | `argparse` 기반 명령어 파싱, 대화형 추가/수정 흐름 및 정렬 테이블 렌더링 |
 | [\_\_main\_\_.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/__main__.py) | CLI 실행 패키지 진입점 (`python3 -m budget_app`) |
@@ -89,6 +89,9 @@
 2. **반복 거래 내역 자동 관리 (`recurring`)**: 월급/월세 등의 반복 일자 템플릿을 등록하고, 특정 월에 일괄 생성해 주는 `recurring generate` 기능 구현. 중복 삽입 방지 로직(동일 날짜, 카테고리, 금액, 메모, `recurring` 태그 기준)이 철저하게 포함되어 있습니다.
 3. **가독성 개선 정렬 테이블 (`cli.py`)**: 외부 라이브러리 없이 한글(2칸 폭)과 영어/숫자(1칸 폭)의 넓이를 정확하게 구분해 주는 한글 폰트 보정 테이블 정렬 출력기 구현.
 4. **저장 원자성 강화**: `repository.py` 내의 모든 갱신 및 파일 재생성 메서드에 임시 파일 생성 + rename 전략을 일괄 적용.
+5. **아키텍처 리팩토링 (Refactoring V2)**:
+    - **입출력 로직의 저장소 위임**: 기존 `service.py`에 구현되어 저장 영역 세부 경로와 임시 파일 생성 로직에 직접 의존하던 반복 거래 데이터 입출력 함수(`load_recurring_templates`, `save_recurring_templates`)를 `repository.py`의 `FileRepository`로 격리 위임하여 단일 책임 원칙(SRP)을 강화했습니다.
+    - **CSV 임포트 정합성 검증 통합**: `import_from_csv` 메서드의 하드코딩 유효성 검사를 제거하고 기존 공통 헬퍼 메서드인 `validate_fields`로 통합하여 정합성 검증 규칙을 공통화했습니다.
 
 ---
 
@@ -98,9 +101,9 @@
 
 ```bash
 $ PYTHONPATH=. python3 -m unittest tests/test_budget.py
-........
+............
 ----------------------------------------------------------------------
-Ran 8 tests in 0.017s
+Ran 12 tests in 0.109s
 
 OK
 ```
