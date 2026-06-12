@@ -368,7 +368,7 @@ flowchart TD
     end
     
     subgraph Decorators ["decorators.py (Aspect)"]
-        CheckCommand -->|유효한 명령어 12종| Decorator["@catch_errors 데코레이터 진입"]
+        CheckCommand -->|유효한 명령어 13종| Decorator["@catch_errors 데코레이터 진입"]
         
         PrintErr[원인 및 해결 힌트 출력, 셸 복원] --> Prompt
     end
@@ -390,61 +390,8 @@ flowchart TD
     end
 ```
 
-### 6.4 셸 명령어 실행 루프 흐름도 (Interactive Loop Flowchart)
 
-```mermaid
-%%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
-flowchart TD
-    Start([프로그램 실행: python3 -m budget_app]) --> Init[__init__.py 실행: 패키지 초기화]
-
-    subgraph Main ["__main__.py (진입점)"]
-        Init --> ParseArgs[글로벌 옵션 --data-dir 분석]
-    end
-    
-    subgraph Repo ["repository.py (FileRepository)"]
-        ParseArgs --> InitRepo[FileRepository 초기화]
-        InitRepo --> CheckCats{카테고리 비어있음?}
-        CheckCats -- Yes --> GenDefaultCats[기본 카테고리 9종 기입 생성]
-    end
-    
-    subgraph Service ["service.py (BudgetService)"]
-        CheckCats -- No --> InitService[BudgetService 및 InteractiveShell 로드]
-        GenDefaultCats --> InitService
-    end
-    
-    subgraph CLI ["cli.py (InteractiveShell)"]
-        InitService --> Welcome[웰컴 배너 출력 및 while True 셸 루프 진입]
-        
-        Welcome --> Prompt[사용자 셸 입력 대기: budget_app 프롬프트]
-        Prompt --> CheckInput{입력 문자열 분석}
-        
-        CheckInput -->|명령어 파싱 실패| ErrCommand[알 수 없는 명령 에러 및 힌트 출력]
-        ErrCommand --> Prompt
-        
-        CheckInput -->|exit 또는 quit| ExitShell[작별 배너 출력 및 루프 탈출]
-        ExitShell --> End([셸 프로세스 안전 종료])
-        
-        CheckInput -->|유효한 명령어 12종| CommandRouting{명령어 핸들러 매핑}
-    end
-    
-    subgraph Decorators ["decorators.py (Aspect)"]
-        CommandRouting --> Decorator["@catch_errors 데코레이터 적용"]
-        Decorator --> Exec["명령어 핸들러 실행 (대화식 / 다이렉트 / 시스템)"]
-        
-        Exec --> CheckError{오류 발생 여부?}
-        CheckError -- Yes --> PrintErr[원인 및 해결 힌트 출력, sys.exit 생략]
-    end
-    
-    subgraph CLI_Loop ["cli.py (출력 및 세이브)"]
-        CheckError -- No --> PrintSuccess[결과 출력 및 갱신 세이브 성공 메시지]
-        
-        PrintErr --> Prompt
-        PrintSuccess --> Prompt
-    end
-```
-
----
-### 6.5 시퀀스 다이어그램
+### 6.4 초기화 및 기본 실행 시퀀스 다이어그램 (Initialization & Execution Sequence Diagram)
 ```mermaid
 sequenceDiagram
     actor User as 사용자
@@ -510,7 +457,7 @@ sequenceDiagram
     end
 
 ```
-### 6.5 시퀀스 다이어그램 2
+### 6.5 상세 명령어 실행 시퀀스 다이어그램 (Detailed Command Execution Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -535,7 +482,7 @@ sequenceDiagram
                 User-->>Shell: 데이터 입력 (디폴트값 덮어쓰기 지원)
                 Shell->>Service: add_transaction() 호출
                 activate Service
-                Service->>Repo: 유효성 검증 후 파일 끝에 append
+                Service->>Repo: append_transaction() 호출 (파일 끝 추가)
                 Service-->>Shell: 생성된 고유 식별자 (TX-ID) 반환
                 deactivate Service
                 Shell-->>User: [저장 완료] 메시지 출력
