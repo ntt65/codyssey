@@ -1,6 +1,6 @@
 # 💰 가계부 애플리케이션 (b2_1) 핵심 개념 스터디 가이드
 
-본 문서는 가계부 애플리케이션(`budget_app`) 프로젝트의 주요 기술적 특징인 **제너레이터 스트리밍, 데코레이터 패턴, 원자적 파일 교체, 계층형 설계**의 이론적 배경과 구현 내용, 그리고 평가/면접에서 나올 수 있는 예상 질문과 모범 답안을 종합 정리한 학습 자료입니다.
+본 문서는 가계부 애플리케이션(`budget_app`) 프로젝트의 주요 기술적 특징인 **제너레이터 스트리밍, 데코레이터 패턴, 타입 힌트, 원자적 파일 교체, 계층형 설계**의 이론적 배경과 구현 내용, 그리고 평가/면접에서 나올 수 있는 예상 질문과 모범 답안을 종합 정리한 학습 자료입니다.
 
 ---
 
@@ -44,15 +44,39 @@
 
 ---
 
-## 3. 원자적 파일 교체 (Atomic Write)와 데이터 신뢰성
+## 3. 타입 힌트(Type Hinting)와 프로그램 안전성
 
 ### 💡 핵심 개념
-* **원자성(Atomicity)**: "전부 실행되거나 혹은 전혀 실행되지 않아야 한다(All-or-Nothing)"는 성질입니다. 
-* **직접 쓰기의 위험성**: 파일을 읽으면서 동시에 원본 파일에 바로 수정 내용을 덮어쓰거나(`open(..., 'w')`), 스트림 쓰기 도중 정전/강제종료가 일어나면 중간에 끊긴 파일이 깨지거나 통째로 유실됩니다.
+* **정적 타입 바인딩 시뮬레이션**: 파이썬은 실행 시점에 타입을 결정하는 대표적인 동적 타입 언어이지만, `typing` 라이브러리를 통해 변수, 인자, 리턴값의 기대 타입을 Annotation 형태로 명시할 수 있습니다.
+* **정적 검증 도구와의 시너지**: 작성된 타입 힌트는 배포 전 린터나 `mypy` 같은 정적 타입 검사기를 가동해 런타임에 발생할 치명적인 `TypeError`를 컴파일 단계(정적 린트)에서 100% 잡아낼 수 있게 돕습니다.
+* **자가 문서화(Self-Documenting)**: 함수의 시그니처만 보고도 어떤 구조의 인자를 전달해 어떤 유형의 데이터를 응답받는지 즉시 알 수 있어 주석의 필요성을 줄이고 협업 생산성을 높입니다.
+
+### 🛠️ 코드 내 구현 현황
+* [models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py): `Transaction` 데이터 클래스의 `tags: List[str]` 속성 선언 및 `from_dict` 메서드의 반환 타입 `-> 'Transaction'` 지정.
+* [repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py): 제너레이터 함수의 반환을 명확하게 규정하는 `stream_transactions(self) -> Generator[Transaction, None, None]` 선언.
+* [service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py): 다중 범위 반환을 나타내는 `import_from_csv(self, filepath: str) -> Tuple[int, int]` 선언.
+
+### ❓ 평가 예상 질문 & 모범 답안
+> **Q. 파이썬은 동적 언어인데 타입 힌트(Type Hinting)를 적용해 얻는 이점은 무엇인가요?**
+> **A.** 런타임에 유발될 수 있는 예기치 않은 데이터 타입 크래시(예: 정수가 들어올 자리에 문자열이 전달되어 발생하는 연산 오류)를 사전에 정적 분석 도구(`mypy`, `Pyright` 등)를 통해 차단할 수 있습니다. 또한 IDE의 자동완성(IntelliSense)과 매개변수 구조 정보 팝업이 완벽히 가동되어 개발 효율이 개선되고, 코드 자체가 API 명세서 역할을 하게 되어 가독성이 비약적으로 향상됩니다.
+
+> **Q. 제너레이터 함수를 선언할 때 리턴 타입 힌트 `Generator[Transaction, None, None]`의 세 인자는 각각 무엇을 의미하나요?**
+> **A.** `Generator[YieldType, SendType, ReturnType]` 순서로 제네릭 타입이 구성됩니다.
+> 1. `YieldType (Transaction)`: 루프 순회 시 `yield` 키워드를 통해 실제로 호출자에게 반환하는 객체의 타입이 `Transaction`임을 정의합니다.
+> 2. `SendType (None)`: 제너레이터 내부로 데이터가 유입(send)되는 흐름이 없음을 뜻합니다.
+> 3. `ReturnType (None)`: 제너레이터 함수가 완전 종료(`return`)할 때 호출자에게 특별히 응답하는 값이 없음을 의미합니다.
+
+---
+
+## 4. 원자적 파일 교체 (Atomic Write)와 데이터 신뢰성
+
+### 💡 핵심 개념
+* **원자성(Atomicity)**: "전부 실행되거나 혹은 전혀 실행되지 않아야 한다(All-or-Nothing)"는 데이터베이스 무결성 원칙입니다. 
+* **직접 쓰기의 위험성**: 파일을 열어 작업 중에 정전이나 앱 강제 종료가 일어나면 스트림 버퍼 쓰기가 멈추면서 데이터 파일이 깨지거나 공백화되어 통째로 유실되는 끔찍한 사고가 터집니다.
 * **임시 파일 + 치환 기법**: 
-  1. 원본 파일 저장 경로와 동일한 안전 영역에 유니크한 임시 파일(`tempfile.mkstemp`)을 생성합니다.
-  2. 임시 파일에 쓰기 작업을 100% 안전하게 모두 기입 완료합니다.
-  3. 완료되면 OS 커널 수준에서 보장하는 원자적 파일 이동 함수인 `os.replace`를 사용하여 임시 파일명을 원래 파일명 위로 덮어씌워 교체합니다.
+  1. 원본 파일과 동일한 물리 디스크 경로에 고유 임시 파일(`tempfile.mkstemp`)을 개설합니다.
+  2. 임시 파일에 데이터 쓰기를 진행해 100% 온전하게 쓰기를 마무리합니다.
+  3. 기록이 끝나면 운영체제(OS)가 안전하게 보장하는 파일 치환 연산인 `os.replace`를 기동하여 임시 파일을 원본 파일명 위로 단숨에 Swap합니다.
 
 ### 🛠️ 코드 내 구현 현황
 * [repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py)의 `update_or_delete_transaction`, `save_categories`, `save_budgets`, `save_recurring_templates` 등 물리 디스크 쓰기가 수반되는 모든 로직에 철저하게 적용되어 있습니다.
@@ -63,7 +87,7 @@
 
 ---
 
-## 4. 계층형 설계 (Layered Architecture)와 의존성 주입 (DI)
+## 5. 계층형 설계 (Layered Architecture)와 의존성 주입 (DI)
 
 ### 💡 핵심 개념
 * **계층 구조 설계 (Layered Architecture)**: 시스템을 논리적이고 독립적인 계층으로 분할하여 상위 계층이 하위 계층을 이용하되 역방향 의존이 생기지 않도록 하는 설계 패턴입니다.
@@ -82,8 +106,8 @@ flowchart LR
     style Files fill:#ffd,stroke:#333,stroke-width:2px
 ```
 
-* **[models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py)**: 도메인 데이터 구조 규격 및 Dict/객체 직렬화 캡슐화.
-* **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py)**: 파일 I/O 및 데이터 CRUD 제어, 원자적 쓰기 등 기계적 파일 영속성 처리 담당.
+* **[models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py)**: 도메인 데이터 구조 규격 및 Dict/객체 직렬화 DTO 역할 전담.
+* **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py)**: 파일 I/O 및 데이터 CRUD 제어, 원자적 쓰기 등 물리 파일 영속성 처리 담당.
 * **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py)**: 데이터 제약 검증 규칙, 집계, 통계, 중복 차단 등 비즈니스 논리 구현.
 * **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py)** & **[__main__.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py)**: 아규먼트 파싱, 화면 프롬프트 렌더링, 입력 보정 등의 사용자 인터페이스 전담.
 
@@ -93,7 +117,7 @@ flowchart LR
 
 ---
 
-## 5. 파이썬 패키지 실행 메커니즘 (`__init__.py` & `__main__.py`)
+## 6. 파이썬 패키지 실행 메커니즘 (`__init__.py` & `__main__.py`)
 
 ### 💡 핵심 개념
 * **`python3 -m budget_app`**: `-m` 옵션은 지정한 모듈 또는 패키지를 파이썬의 모듈 탐색 경로(`sys.path`)에서 검색하여 메인 스크립트처럼 직접 가동시키는 옵션입니다.
@@ -107,7 +131,7 @@ flowchart LR
 
 ---
 
-## 6. 고급 CLI 편의 기능 및 다국어 렌더링
+## 7. 고급 CLI 편의 기능 및 다국어 렌더링
 
 ### 💡 CJK(한글) 폰트 가폭 깨짐 정렬 보정
 * **문제점**: 영문/숫자는 1바이트 크기(폭 1)를 가지나, 한글은 2바이트 크기(폭 2)를 가집니다. 일반적인 `len()`이나 서식자(`%-10s`)를 쓰면 한글 1글자를 영문 1글자와 동일 너비로 취급해 테이블 출력 시 열 줄이 비뚤비뚤하게 깨집니다.
