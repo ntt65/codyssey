@@ -1,12 +1,12 @@
 # 💰 대화형 파일 기반 가계부 콘솔 프로그램 (budget_app) 사용자 가이드
 
-본 가계부 애플리케이션(`budget_app`)은 파이썬 표준 라이브러리만을 활용해 최적화된 자원 관리(Generator)와 데이터 무결성 보호(Atomic Write)를 고려하여 구축된 강건한 콘솔 프로그램입니다. 
+본 가계부 애플리케이션(`budget_app`)은 파이썬 표준 라이브러리만을 활용해 최적화된 자원 관리(Generator)와 데이터 무결성 보호(Atomic Write)를 고려하여 구축된 강건한 콘솔 프로그램입니다.
 
 ---
 
 ## 1. 실행 방법 및 초기 기동
 
-본 애플리케이션은 파이썬 패키지 실행 표준에 따라 가계부 루트 폴더(`/Users/mpeg46551/codyssey/b2_1`) 내에서 가동합니다.
+본 애플리케이션은 파이썬 패키지 실행 표준에 따라 가계부 루트 폴더 `/Users/mpeg46551/codyssey/b2_1` 내에서 가동합니다.
 
 ```bash
 # 기본 데이터 경로(./data)를 기반으로 대화형 셸 실행
@@ -50,66 +50,277 @@ python3 -m budget_app --data-dir ./my_custom_data
 
 ---
 
-## 4. 핵심 기능 Q&A 매뉴얼 (mission.pdf 사양 정돈)
+## 4. 최종 결과물 10대 기능별 소스 구현 설명
 
-#### **Q1. 거래 추가(add)는 어떻게 진행되며 어떤 검증 과정을 거치나요?**
-* **A.** 대화형 프롬프트를 통해 거래 정보를 차례대로 입력받으며, 생성 완료 시 고유 ID(TX-XXXXXX)를 반환합니다.
-* **상세 스펙**:
-  * 날짜 포맷 검사(윤년 보정), 음수/0원 차단, 미등록 카테고리 탐색 등의 입력 검증을 일괄 수행합니다.
-  * 존재하지 않는 카테고리를 입력한 경우, 에러로 튕기는 대신 카테고리 등록 화면으로 자연스럽게 안내합니다.
+### 4.1 거래 추가 (add)
+* **설명**: 대화형 프롬프트를 통해 필드들을 순차적으로 입력받으며, 입력값들의 제약 규칙(날짜 포맷 및 윤년, 양수 금액, 등록 카테고리 여부)을 통합 검증한 뒤, 고유 거래 ID(TX-XXXXXX)를 채번해 영속 파일 끝에 추가 기록합니다.
+* **소스 코드**: [service.py:L41-L68](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L41-L68)
+```python
+def add_transaction(self, date: str, type_str: str, category: str, amount: int, memo: str, tags: List[str]) -> str:
+    # 1. 입력 필드의 비즈니스 제약 준수 여부 정밀 통합 검증
+    self.validate_fields(date, type_str, category, amount)
+    # 2. 다음 고유 거래 ID(TX-XXXXXX 형태) 순차 채번
+    tx_id = self.repository.get_next_transaction_id()
+    # 3. 데이터 도메인 구조인 Transaction 객체 인스턴스화
+    tx = Transaction(
+        id=tx_id,
+        type=type_str,
+        date=date,
+        amount=amount,
+        category=category,
+        memo=memo,
+        tags=tags
+    )
+    # 4. 저장소 파일의 끝에 데이터 직렬화 기입 수행
+    self.repository.append_transaction(tx)
+    return tx_id
+```
 
-#### **Q2. 거래 목록(list) 조회 시 대용량 파일 병목을 어떻게 방지하나요?**
-* **A.** `--limit N` 옵션(생략 시 기본 50개)을 활용해 최근 내역 순(날짜 내림차순, 동일 날짜는 ID 내림차순)으로 테이블 표 정렬하여 출력합니다.
-* **상세 스펙**:
-  * 디스크 데이터를 한 번에 로드하지 않고 파이썬 제너레이터(`yield`)로 한 행씩 순차 로드합니다.
-  * 고정된 limit 크기를 유지하는 **정렬 삽입 버퍼(Sorted Insertion Buffer)** 기법을 사용하여, 10만 건 이상의 데이터 환경에서도 메모리 점유율을 상시 $O(\text{limit})$ 수준으로 제한합니다.
+### 4.2 거래 목록 (list)
+* **설명**: 최신 날짜 및 최신 ID 역순에 맞춰 상위 `--limit N`개의 거래를 정렬 리스트로 축적하여 표 형식으로 출력합니다.
+* **소스 코드**: [service.py:L70-L96](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L70-L96)
+```python
+def list_transactions(self, limit: int) -> List[Transaction]:
+    top_txs: List[Transaction] = [] # 정렬 순서대로 최대 limit 만큼 보관할 인메모리 버퍼
+    # 1. stream_transactions 제너레이터로부터 한 줄씩 순차 로딩
+    for tx in self.repository.stream_transactions():
+        inserted = False
+        for i, existing in enumerate(top_txs):
+            # 2. 날짜 최신순, 날짜 같으면 ID 역순 정렬 위치 삽입 탐색
+            if tx.date > existing.date or (tx.date == existing.date and tx.id > existing.id):
+                top_txs.insert(i, tx)
+                inserted = True
+                break
+        if not inserted:
+            top_txs.append(tx)
+        
+        # 3. 버퍼 크기가 limit 한계를 상회하면 끝단의 가장 낡은 요소 제거
+        # -> 메모리 점유율을 언제나 O(limit)로 억제해 대량 데이터 처리 최적화
+        if len(top_txs) > limit:
+            top_txs.pop()
+            
+    return top_txs
+```
 
-#### **Q3. 거래 조건 상세 검색(search)은 어떤 조건들을 지원하나요?**
-* **A.** 기간 범위(`--from`/`--to`), 카테고리(`--category`), 수입/지출 분류(`--type`), 메모 키워드(`--q`), 특정 태그(`--tag`) 필터를 동시에 지원합니다.
-* **상세 스펙**:
-  * 조건들에 일치하는 데이터들만 선별해 최신 날짜순으로 테이블로 렌더링하며, 제너레이터 스트리밍을 동일하게 탑재하여 메모리 효율을 보장합니다.
+### 4.3 거래 검색 (search)
+* **설명**: 복합 필터 조건(기간 범위, 특정 카테고리, 수입/지출 분류, 메모 키워드, 특정 태그)을 실시간으로 감정하여 매칭되는 레코드들을 최신순으로 정렬 추출합니다.
+* **소스 코드**: [service.py:L98-L150](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L98-L150)
+```python
+def search_transactions(self, from_date: Optional[str] = None, to_date: Optional[str] = None, 
+                        category: Optional[str] = None, type_str: Optional[str] = None, 
+                        query: Optional[str] = None, tag: Optional[str] = None, limit: int = 50) -> List[Transaction]:
+    top_txs: List[Transaction] = []
+    # 1. 제너레이터 스트리밍 도중 필터링을 실시간 즉시 단행
+    for tx in self.repository.stream_transactions():
+        if from_date and tx.date < from_date: continue
+        if to_date and tx.date > to_date: continue
+        if category and tx.category != category: continue
+        if type_str and tx.type != type_str: continue
+        if query and query.lower() not in tx.memo.lower(): continue
+        if tag and tag not in tx.tags: continue
 
-#### **Q4. 월별 요약(summary)과 예산 정보는 어떻게 결합되어 출력되나요?**
-* **A.** 특정 월의 수입합, 지출합, 잔액 수치를 기재하고 가장 지출 규모가 큰 TOP N 카테고리 리스트(-top 옵션)를 백분율 그래프와 함께 드로잉합니다.
-* **상세 스펙**:
-  * 해당 월에 책정된 예산 한도액이 존재하는 경우 예산 대비 사용률(%)을 소수점 한 자리까지 환산하며, 예산 사용이 초과된 위험 상태인 경우 ⚠️ 한도 초과 위험 경고 메시지를 하단에 병독 출력해 줍니다. 데이터가 전혀 없는 월은 "데이터 없음"을 사용자에게 인지시킵니다.
+        # 2. 필터 통과 데이터를 정렬 버퍼에 삽입 정렬
+        inserted = False
+        for i, existing in enumerate(top_txs):
+            if tx.date > existing.date or (tx.date == existing.date and tx.id > existing.id):
+                top_txs.insert(i, tx)
+                inserted = True
+                break
+        if not inserted:
+            top_txs.append(tx)
 
-#### **Q5. 월별 예산 설정 및 조회(budget)는 어떻게 사용하나요?**
-* **A.** `budget set --month YYYY-MM --amount 금액` 명령어 또는 프롬프트를 통해 간편하게 월별 예산 한도액을 책정할 수 있습니다.
-* **상세 스펙**:
-  * 저장된 예산 한도 정보는 budgets 파일에 안전하게 보존되며, 상위 summary 연산 루프 시 실시간으로 계산에 로드되어 체크됩니다.
+        # 3. limit 버퍼 크기 제약 준수
+        if len(top_txs) > limit:
+            top_txs.pop()
 
-#### **Q6. 카테고리 관리(category) 시 사용 중인 단어의 안전 삭제를 보장하나요?**
-* **A.** 카테고리 추가(`add`), 조회(`list`), 삭제(`remove`) 관리를 제공합니다.
-* **상세 스펙**:
-  * 데이터 무결성 준수를 위해, 특정 카테고리를 삭제하려고 시도할 때 가계부 거래 로그 내역 중 단 1건이라도 해당 카테고리를 채택하여 활용 중인 레코드가 발견되면 삭제를 사전에 원천 차단하고 반려하여 무결성을 보호합니다.
+    return top_txs
+```
 
-#### **Q7. 거래 정보의 수정(update)과 삭제(delete)는 어떻게 안전성을 확보하나요?**
-* **A.** 수정 시에는 대상 ID에 보관되어 있던 기존 정보 항목들을 기본값 `[기본치]` 형태로 인라인 prefill 채워주어, 정정이 불필요한 항목은 바로 엔터를 치고 필요한 항목만 오버라이트 수정할 수 있어 대단히 편리합니다. 삭제 시에는 예기치 못한 삭제를 막기 위해 2단계 재확인 컨펌(y/n)을 묻습니다.
-* **상세 스펙**:
-  * 수정/삭제 처리 시 원본에 직접 덮어쓰지 않고, 임시 파일에 수정분을 온전히 다 기록한 후 OS 커널이 보장하는 `os.replace()`를 가동해 원자적(Atomic) 교체 스왑을 진행함으로써 작업 도중 정전 등으로 인한 데이터 파일 오염 및 파괴를 완벽 차단합니다.
+### 4.4 월별 요약 (summary)
+* **설명**: 타겟 월의 총수입, 총지출, 최종 정산 잔액을 산출하고 지출 규모가 가장 막강한 카테고리 순위 TOP N을 예산 설정 정보와 조합 출력합니다.
+* **소스 코드**: [service.py:L279-L324](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L279-L324)
+```python
+def get_monthly_summary(self, month: str, top_n: int) -> dict:
+    self.validate_month_format(month)
+    total_income = 0
+    total_expense = 0
+    category_expenses: Dict[str, int] = {}
+    has_data = False
 
-#### **Q8. 외부 CSV 가져오기(import)와 내보내기(export)는 오염 행을 어떻게 거르나요?**
-* **A.** CSV 내보내기 시 대상 월 또는 날짜 범위를 선별하여 6열 스키마 형태로 추출 저장합니다.
-* **상세 스펙**:
-  * CSV 가져오기 진행 도중 날짜 포맷이 깨졌거나 음수 금액 등 유효성 위반 데이터를 지닌 행이 섞여 있는 경우, 전체를 에러로 롤백하지 않고 오류 행만 스킵 처리한 뒤 정상 행만 삽입하는 **부분 성공(Partial Success)** 기법을 적용합니다. 완료 시 성공 및 무시된 skipped 건수를 정확히 통계 리포팅합니다.
+    # 1. 타겟 연월에 부합하는 내역들의 수입/지출 및 카테고리별 누적액 집계
+    for tx in self.repository.stream_transactions():
+        if tx.date.startswith(month + "-"):
+            has_data = True
+            if tx.type == "income":
+                total_income += tx.amount
+            elif tx.type == "expense":
+                total_expense += tx.amount
+                category_expenses[tx.category] = category_expenses.get(tx.category, 0) + tx.amount
 
-#### **Q9. 공통 관심사를 데코레이터로 어떻게 느슨하게 결합시켰나요?**
-* **A.** 로그 감시(`@log_action`), 정밀 시간 측정(`@measure_time`), 입력 한계 에러 방어선(`@catch_errors`) 3대 데코레이터를 구축했습니다.
-* **상세 스펙**:
-  * 핵심 서비스 조작 연산과 부가적인 에러 처리 코드가 섞이지 않도록 관심사를 분리(AOP)했으며, 셸 명령 수행 시 치명적인 값 결손 에러 등이 터지더라도 프로세스가 종료되지 않고 에러 세부 힌트만 정중히stderr 출력한 뒤 셸 명령어 입력 대기 루프로 자동 복귀하게 만듭니다.
+    if not has_data:
+        return {"has_data": False} # 데이터 부재 시 조기 종료 알림
 
-#### **Q10. 정상 및 비정상 종료 시의 셸 종료 코드(Exit Code)는 어떻게 반환하나요?**
-* **A.** 정상 및 비정상 종료 코드의 명확한 차등 처리를 이행합니다.
-* **상세 스펙**:
-  * 가계부 시작 초기화 과정 중 디스크 손상이나 저장소 접근 거부 권한 등으로 구동 실패 시에는 프로세스 종료 코드로 **1**을 반환하며 비정상 종료하고, 셸 동작 중 exit/quit 명령어를 통해 정상 종료하거나 단축키(Ctrl+D) 입력 시에는 루프를 완전히 이탈하여 종료 코드 **0**으로 깔끔하게 종료됩니다.
+    # 2. 카테고리 지출 크기순 내림차순 정렬 후 상위 TOP N 분할
+    sorted_categories = sorted(category_expenses.items(), key=lambda x: x[1], reverse=True)
+    top_categories = sorted_categories[:top_n]
 
-#### **Q11. 백업 기능(backup)과 반복 자동 생성(recurring) 보너스 사양의 동작 방식은 무엇인가요?**
-* **A.** 실무 수준의 복구 기능과 반복 결제 자동화 스펙을 제공합니다.
-* **상세 스펙**:
-  * **Backup**: 현재 활용 중인 가계부 데이터 4종을 타임스탬프를 기재한 단일 ZIP 파일 아카이브로 묶어 backups 안전 디렉터리에 기입 저장합니다.
-  * **Recurring**: 반복 수입/지출 템플릿(REC-ID)을 저장소에 등록한 뒤, 발생 처리 명령 실행 시 타겟 연월에 맞춰 거래 기록에 자동 이식합니다. 이때 돈이 중복 가산되는 실수를 막기 위해, 날짜/타입/분류/금액 및 생성 식별 전용 태그(`recurring`)를 지닌 거래가 해당 월에 이미 존재하면 필터링하여 이중 생성을 차단합니다.
+    # 3. 설정되어 보존 중인 예산 한도액 조회 연동
+    budgets = self.repository.load_budgets()
+    budget = budgets.get(month)
+
+    return {
+        "has_data": True,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "balance": total_income - total_expense,
+        "top_categories": top_categories,
+        "budget": budget
+    }
+```
+
+### 4.5 예산 설정/조회 (budget)
+* **설명**: `YYYY-MM` 연월 키값과 해당 월의 한도 정수 금액을 입력받아 budgets 영속화 파일에 저장합니다.
+* **소스 코드**: [service.py:L264-L278](file:///file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L264-L278)
+```python
+def set_budget(self, month: str, amount: int):
+    # 1. 월 표기식(YYYY-MM) 유효성 점검
+    self.validate_month_format(month)
+    if amount < 0:
+        raise ValueError("예산 금액은 0 이상이어야 합니다.")
+    # 2. 기존 딕셔너리 예산 맵 조회 및 값 오버라이트 갱신
+    budgets = self.repository.load_budgets()
+    budgets[month] = amount
+    # 3. 임시 파일 치환 전략으로 무결성을 지키며 원자적 파일 영속화 수행
+    self.repository.save_budgets(budgets)
+```
+
+### 4.6 카테고리 관리 (category)
+* **설명**: 신규 카테고리를 고유하게 등록하거나 조회하며, 삭제(`remove_category`) 시 거래 내역 중 해당 카테고리를 활용 중인 로그가 발견될 시 삭제를 강제 반려하여 데이터 참조 무결성을 지킵니다.
+* **소스 코드**: [service.py:L223-L245](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L223-L245) | [service.py:L247-L260](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L247-L260)
+```python
+def remove_category(self, name: str) -> bool:
+    name = name.strip()
+    categories = self.repository.load_categories()
+    if name not in categories:
+        raise ValueError(f"존재하지 않는 카테고리입니다: {name}")
+    
+    # 1. 가계부 거래 파일 전체를 스캔하여 참조 무결성 유무 감시
+    if self.is_category_in_use(name):
+        # 2. 거래 파일에서 사용 중인 흔적이 발견되면 에러 발생시켜 삭제 반려
+        raise ValueError(f"카테고리 '{name}'을 사용하는 거래 내역이 존재하여 삭제할 수 없습니다.")
+    
+    categories.remove(name)
+    self.repository.save_categories(categories) # 안전하게 파일 저장
+    return True
+```
+
+### 4.7 거래 수정 (update)
+* **설명**: 정정하고자 하는 거래 ID의 정보를 수정합니다. 콘솔 프롬프트 수정 시 기존 보관값들을 미리 인라인 완성 형태로 채워주어 필요한 항목만 바로 수정 변경할 수 있습니다.
+* **소스 코드**: [service.py:L152-L179](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L152-L179)
+```python
+def update_transaction(self, tx_id: str, date: str, type_str: str, category: str, amount: int, memo: str, tags: List[str]) -> bool:
+    # 1. 갱신을 위해 투입된 새 필드들의 형식 유효성 통합 점검
+    self.validate_fields(date, type_str, category, amount)
+    # 2. 수정 변경할 데이터 필드들을 병합한 Transaction 도메인 객체 조립
+    updated_tx = Transaction(
+        id=tx_id,
+        type=type_str,
+        date=date,
+        amount=amount,
+        category=category,
+        memo=memo,
+        tags=tags
+    )
+    # 3. 저장소의 원자적 복사 치환(Atomic Replacement)을 호출해 영속 보장
+    return self.repository.update_or_delete_transaction(tx_id, updated_tx)
+```
+
+### 4.8 거래 삭제 (delete)
+* **설명**: 지정 고유 ID를 지닌 거래 내역을 삭제하며, 삭제 요청 전 2차 컨펌(y/n)을 질의합니다.
+* **소스 코드**: [service.py:L180-L191](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L180-L191) | [repository.py:L84-L127](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L84-L127)
+```python
+# [service.py:L180-L191] - 삭제 비즈니스 연동
+def delete_transaction(self, tx_id: str) -> bool:
+    # 1. updated_tx 인자 자리에 None을 넘겨 해당 ID 행 복사를 유도 생략
+    return self.repository.update_or_delete_transaction(tx_id, None)
+
+# [repository.py:L84-L127] - update_or_delete_transaction 내부 교체 루프 일부
+# 임시 파일을 안전하게 생성 후 라인 복사를 이행하다가, 타겟 ID 발견 시 updated_tx 유무 판정
+if data.get("id") == tx_id:
+    found = True
+    if updated_tx is not None: # 수정(Update) 시 신규 데이터 기입
+        out_f.write(json.dumps(updated_tx.to_dict(), ensure_ascii=False) + "\n")
+    # None인 경우(Delete) out_f에 쓰기를 생략함으로써 타겟 라인이 제거된 복사본 임시 파일 완결
+```
+
+### 4.9 가져오기/내보내기 (import/export)
+* **설명**: 조건(월별 또는 날짜 범위)에 맞는 기록을 UTF-8 CSV 규격으로 추출(export)하고 외부 CSV를 가져옵니다(import). 가져올 때 오류 데이터 행은 안전하게 스킵하고 정상 행만 임포팅하는 부분 성공(Partial Success) 결과 처리를 수행합니다.
+* **소스 코드**: [service.py:L328-L368](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L328-L368) | [service.py:L370-L439](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L370-L439)
+```python
+def import_from_csv(self, filepath: str) -> Tuple[int, int]:
+    # ... CSV 파일 경로 검증 및 헤더 검증 수행 ...
+    imported = 0
+    skipped = 0
+    with open(filepath, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean_row = {k.strip(): v.strip() for k, v in row.items() if k is not None and v is not None}
+            # ... 데이터 추출 ...
+            is_valid = True
+            try:
+                # 1. 공통 유효성 검사 도구를 재사용해 개별 행 데이터 정합성 검증
+                self.validate_fields(date_str, type_str, category_str, int(amount_str))
+            except Exception:
+                is_valid = False # 포맷 에러 시 False 플래그 처리
+            
+            if not is_valid:
+                # 2. 에러가 나더라도 전체 롤백하지 않고 해당 행만 스킵 처리하여 무결성 유지
+                skipped += 1
+                continue
+            
+            # ... 통과 데이터에 신규 ID를 매핑해 영속화 기입 ...
+            imported += 1
+
+    return imported, skipped # 3. 성공 건수 및 스킵 건수 결과 튜플 반환
+```
+
+### 4.10 추가 조건 (최종 결과물의 필수 구성)
+* **설명**: 데이터 무결성과 제너레이터 스트리밍 효율을 위해 4개 파일로 격격 구조화하여 데이터를 관리하며, 명령 예시 및 스키마에 관한 구동 가이드를 제시합니다.
+* **소스 코드**: [repository.py:L33-L45](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L33-L45)
+```python
+def __init__(self, data_dir: str):
+    self.data_dir = data_dir
+    # 1. 거래 내역, 카테고리, 월별 예산, 정기 반복 템플릿 총 4종의 JSONL 물리 경로 확보
+    self.transactions_path = os.path.join(data_dir, "transactions.jsonl")
+    self.categories_path = os.path.join(data_dir, "categories.jsonl")
+    self.budgets_path = os.path.join(data_dir, "budgets.jsonl")
+    self.recurring_path = os.path.join(data_dir, "recurring.jsonl")
+    # 2. 물리 저장소 디렉터리 존재 여부 보장
+    self._ensure_dir()
+```
 
 ---
 
-*※ 보다 세부적인 레이어 아키텍처 설계와 5대 구조 다이어그램, 7대 핵심 코드 스니펫에 관한 분석이 필요하신 경우 [code_review.md](file:///Users/mpeg46551/codyssey/b2_1/code_review.md) 파일을 참조해 주십시오.*
+## 5. 보너스 과제 구현 및 공통 횡단 관심사
+
+### 5.1 백업 아카이브 기능 (backup)
+* 현재 사용 중인 영속 가계부 파일 4개를 timestamp를 포함하는 고유 명칭의 단일 ZIP 아카이브 압축 파일로 수집 통합하여 backups 하위 안전 영역에 기입합니다.
+* [service.py:L443-L469](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L443-L469)
+
+### 5.2 반복 내역 다회 자동 기입 (recurring)
+* 매월 고정 결제 및 급여 정보 템플릿(REC-ID)을 영구 등록한 뒤 실행 시 일괄 자동 기입합니다. 이때 생성일자, 거래유형, 액수 및 자동 생성 표식 태그(`recurring`)를 비교하여 기등록 동일 거래가 있을 시 필터 처리해 이중 생성을 완벽히 방지합니다.
+* [service.py:L548-L614](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L548-L614)
+
+### 5.3 CJK(한글) 터미널 테이블 격자 정렬 및 macOS IME 스위칭
+* **한영 키 자동 강제 전환**: 사용자 명령어 오타 방지를 위해 `ctypes` 모듈을 이용해 macOS Carbon 및 CoreFoundation TIS API를 바인딩 호출하여, 셸 대기 전 한글 모드를 US English 영문 자판 상태로 프로그래밍 방식으로 자동 변환합니다.
+* **CJK 문자 폭 보정 정렬**: 동아시아 한글의 시각적 너비를 2칸으로 자동 계산해 테이블 표의 가로 열 배치가 삐뚤어지지 않게 정렬 공백 수치 패딩을 수동 계산해 격자 형태로 출력합니다.
+* [cli.py:L38-L83](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L38-L83) | [cli.py:L295-L313](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L295-L313) | [cli.py:L331-L364](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L331-L364)
+
+### 5.4 공통 데코레이터 및 종료 코드 분리
+* **@catch_errors 데코레이터**: 입출력 인터페이스의 경계면에서 발생하는 런타임 예외를 한곳으로 포집하여 스택트레이스 유출을 제어하고 해결을 위한 친화적 에러 힌트만 출력한 뒤 셸 명령어 루프를 보존 복원합니다.
+* **종료 코드 (Exit Code) 격리**: 시작 초기화 단계 도중 발생한 크래시에 대해서는 종료 코드 `1`로 비정상 종료하고, 셸을 통한 정상 이탈(exit/quit/EOF)은 루프를 안전하게 탈출 후 코드 `0`을 리턴하도록 처리합니다.
+* [decorators.py:L20-L47](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L20-L47) | [__main__.py:L39-L48](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L39-L48) | [cli.py:L675-L701](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L675-L701)
+
+---
+
+*※ 보다 세부적인 레이어 아키텍처 설계와 5대 구조 다이어그램에 관한 분석이 필요하신 경우 [code_review.md](file:///Users/mpeg46551/codyssey/b2_1/code_review.md) 파일을 참조해 주십시오.*
