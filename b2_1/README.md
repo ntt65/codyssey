@@ -18,6 +18,11 @@ python3 -m budget_app
 python3 -m budget_app --data-dir ./my_custom_data
 ```
 
+### 💡 패키지 실행 시 동작 흐름 및 초기화 시점
+`python3 -m budget_app` 명령어로 패키지를 실행할 때, 파이썬 인터프리터가 패키지를 로드하고 진입점을 찾아 실행하는 순서는 다음과 같습니다:
+1. **패키지 초기화 (`__init__.py` 실행)**: 파이썬 인터프리터가 `budget_app` 패키지를 로드하는 과정에서 `budget_app/__init__.py` 파일이 가장 먼저 실행되어 패키지 수준의 임포트 및 초기화를 수행합니다.
+2. **진입점 실행 (`__main__.py` 실행)**: 패키지 로드 및 초기화가 완료된 후, `-m` 옵션의 타겟인 `budget_app/__main__.py` 파일이 메인 스크립트(`__name__ == "__main__"`)로써 실행됩니다. 이 진입점에서 최종적으로 의존성이 조립되고 가계부 셸 프로그램이 시작됩니다.
+
 ### 셸 진입 후 구동 예시
 프로그램을 실행하면 가계부 전용 셸 프롬프트(`budget_app> `)가 표시되며 바로 명령을 내릴 수 있습니다:
 ```text
@@ -157,13 +162,51 @@ budget_app> category
   - **[Transaction](budget_app/models.py)** : 개별 수입/지출 내역의 데이터 구조(`dataclass`) 및 딕셔너리 직렬화/역직렬화 처리
   - **[RecurringTemplate](budget_app/models.py)** : 고정/반복 거래 설정 데이터 구조(`dataclass`) 정의
 - **[repository.py](budget_app/repository.py)**
-  - **[FileRepository](budget_app/repository.py)** : 로컬 파일 시스템 CRUD 제어, 데이터 스트리밍 및 원자적(Atomic) 파일 교체 전략 수행
+  - **[FileRepository](budget_app/repository.py)** :
+*"이 `repository.py` 파일은 가계부 데이터를 4개의 파일로 나누어 영구 저장하며, **정전이 돼도 데이터가 안 날아가게(원자적 교체) 방어**하고, **100만 건의 데이터가 쌓여도 컴퓨터가 느려지지 않게(제너레이터 스트리밍) 만들어진 아주 튼튼한 데이터베이스 관리자**입니다!"* 
+   #### 로컬 파일 시스템 CRUD 제어, 데이터 스트리밍 및 원자적(Atomic) 파일 교체 전략 수행
+    - budget_app/repository.py - 데이터 영속성 계층 (Data Access & Storage Layer)
+    본 모듈은 가계부 프로그램(budget_app)에서 사용하는 JSONL(JSON Lines) 형식의 파일 데이터
+    (거래 내역, 카테고리 목록, 예산 한도, 반복 거래 템플릿)의 직접적인 파일 CRUD 처리를 전담합니다.
+
+    [주요 설계적 강점 및 구현 내용]
+    1. 원자적 파일 교체 (Atomic File Replacement): 
+    - 데이터 수정/삭제 또는 카테고리/예산 저장 시, 원본에 스트림 쓰기를 하다가 비정상 종료 시
+        발생할 수 있는 파일 오염을 방지하기 위해 임시 파일(tempfile)을 생성하여 쓰고, 
+        안전하게 기록이 끝나면 os.replace() 연산으로 원자적 치환(Atomic Swap)을 구현했습니다.
+    2. 제너레이터 스트리밍 (Generator Streaming):
+    - 거래 내역과 같이 규모가 지속적으로 증대할 수 있는 데이터 조회 시, 파일 전체를 메모리에
+        동시에 올리지 않고 yield 제너레이터를 통하여 실시간 한 줄씩 순차적으로 스트리밍하여
+        메모리 사용량을 제한된 자원 O(1) 수준으로 유지합니다.
+    질문해주신 문구는 앞서 우리가 함께 살펴보았던 **`FileRepository` 클래스(창고 관리자)의 핵심 역할과 설계 철학**을 요약한 개발 설명서입니다. 
+
+
+    #### 1. 데이터 영속성 계층 (Data Access & Storage Layer)이란?
+    프로그램을 껐다 켜도 데이터가 날아가지 않고 영구적으로 보존되는 것을 '영속성(Persistence)'이라고 부릅니다. 
+    * 이 모듈은 가계부의 핵심 로직(서비스 계층)과 분리되어, **오직 파일 시스템(하드디스크)에 접근해 데이터를 읽고 쓰는(CRUD: 생성/조회/수정/삭제) 작업만을 전담하는 '데이터 창고' 역할**을 한다는 뜻입니다.
+    * 거래 내역(`transactions.jsonl`), 카테고리(`categories.jsonl`), 예산(`budgets.jsonl`), 반복 거래(`recurring.jsonl`) 등 4가지 필수 데이터를 안전하게 보관하는 책임을 집니다.
+
+    #### 2. 원자적 파일 교체 (Atomic File Replacement)의 의미
+    이 부분은 이전 대화에서 다뤘던 **'데이터 손상 완벽 방어'** 기술을 설명하는 부분입니다.
+    * **문제 상황:** 원본 데이터 파일에 직접 새로운 내용을 덮어쓰고 있는데, 갑자기 정전이 되거나 컴퓨터가 멈추면 파일이 반쪽만 기록되어 데이터가 완전히 오염(증발)될 위험이 있습니다.
+    * **해결책 (원자적 쓰기):** 이를 막기 위해 원본을 바로 건드리지 않고, 안전한 **임시 파일(`tempfile`)**을 몰래 하나 만듭니다. 이 임시 파일에 변경된 내용을 100% 완벽하게 기록을 끝마친 뒤에야, 운영체제(OS)의 **`os.replace()` 기능을 호출해 원본 파일과 단번에 바꿔치기(Atomic Swap)** 합니다. 
+    * 이렇게 하면 중간에 에러가 나더라도 임시 파일만 날아갈 뿐, 원본 가계부 데이터는 안전하게 보호됩니다.
+
+    #### 3. 제너레이터 스트리밍 (Generator Streaming)의 의미
+    가계부를 몇 년 동안 써서 거래 내역이 10만 건, 100만 건으로 늘어났을 때를 대비한 **'메모리(RAM) 최적화'** 기술입니다.
+    * **문제 상황:** 파일 전체를 한 번에 메모리로 불러오면(`readlines()` 등 사용), 데이터가 커질수록 컴퓨터 메모리가 터져버리거나 프로그램이 엄청나게 느려집니다.
+    * **해결책 (제너레이터):** 파이썬의 **`yield`**라는 문법을 사용해 파일을 한 번에 다 읽지 않고, **실시간으로 딱 '한 줄(하나의 거래 내역)'씩만 읽어와서 처리하고 메모리에서 지워버리는 스트리밍 방식**을 사용합니다.
+    * **결과:** 이 덕분에 데이터가 아무리 커져도 프로그램이 차지하는 메모리는 **$O(1)$(또는 정렬 시 $O(limit)$ 수준)로 아주 작고 일정하게 유지**되어 언제나 빠르고 가볍게 동작할 수 있습니다.
+
+---
 - **[service.py](budget_app/service.py)**
   - **[BudgetService](budget_app/service.py)** : 필터링/정렬 버퍼 연산, 소비율 집계, CSV 변환(Import/Export), 백업 압축, 반복 거래 일괄 생성 등 비즈니스 로직 전담
 - **[cli.py](budget_app/cli.py)**
   - **[InteractiveShell](budget_app/cli.py)** : 셸 명령어 분석 및 대화식 입력 프롬프트 제어, 자동완성 제공, 한글 정렬 기반 결과 테이블 시각화
 - **[__main__.py](budget_app/__main__.py)**
   - entry point : 글로벌 명령어 라인 옵션 분석 및 데이터 계층부터 UI 계층까지의 의존성(Repository ➔ Service ➔ Shell) 주입 및 앱 실행
+- **[__init__.py](budget_app/__init__.py)**
+  - package initialization : `python3 -m budget_app` 실행 시 패키지 로드 과정에서 `__main__.py` 진입 전에 가장 먼저 실행되어 패키지 초기화를 담당
 - **[decorators.py](budget_app/decorators.py)**
   - decorator : 동작 로깅(`@log_action`), 소요 시간 정밀 기록(`@measure_time`), 에러 가두기 및 자동 복구(`@catch_errors`) 구현
 
@@ -274,13 +317,16 @@ classDiagram
     BudgetService ..> RecurringTemplate : creates/manages
 ```
 
+
 ### 6.2 가계부 앱 초기 실행부터 프롬프트 대기까지의 5단계 흐름
 
 ```mermaid
 %%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
+    Start([프로그램 실행: python3 -m budget_app]) --> Init[__init__.py 실행: 패키지 초기화]
+    
     subgraph Main ["__main__.py (진입점)"]
-        Start([프로그램 실행: python3 -m budget_app]) --> Step1[1단계: argparse 인자 파싱 및 데이터 폴더 설정]
+        Init --> Step1[1단계: argparse 인자 파싱 및 데이터 폴더 설정]
     end
     
     subgraph Repo ["repository.py (FileRepository)"]
@@ -349,8 +395,10 @@ flowchart TD
 ```mermaid
 %%{init: {'themeVariables': { 'fontSize': '16px' }}}%%
 flowchart TD
+    Start([프로그램 실행: python3 -m budget_app]) --> Init[__init__.py 실행: 패키지 초기화]
+
     subgraph Main ["__main__.py (진입점)"]
-        Start([프로그램 실행: python3 -m budget_app]) --> ParseArgs[글로벌 옵션 --data-dir 분석]
+        Init --> ParseArgs[글로벌 옵션 --data-dir 분석]
     end
     
     subgraph Repo ["repository.py (FileRepository)"]
@@ -396,7 +444,146 @@ flowchart TD
 ```
 
 ---
+### 6.5 시퀀스 다이어그램
+```mermaid
+sequenceDiagram
+    actor User as 사용자
+    participant Init as __init__.py
+    participant Main as __main__.py
+    participant Parser as argparse
+    participant Repo as FileRepository
+    participant Service as BudgetService
+    participant Shell as InteractiveShell
 
+    %% 1. 프로그램 초기화 단계
+    User->>Init: 프로그램 실행 (python3 -m budget_app)
+    activate Init
+    Init-->>Main: 패키지 로드 완료 및 진입점 실행
+    deactivate Init
+    activate Main
+
+    Main->>Parser: 명령줄 인자(옵션) 파싱 요청
+    activate Parser
+    Parser-->>Main: args (data_dir 경로 등) 반환
+    deactivate Parser
+
+    Main->>Repo: FileRepository(args.data_dir) 객체 생성
+    activate Repo
+    Repo->>Repo: 데이터 폴더 및 4가지 JSONL 파일 경로 초기화
+    alt 카테고리 파일이 비어있음
+        Repo->>Repo: 9종 기본 카테고리 자동 생성 및 기입
+    end
+    Repo-->>Main: repo 객체 반환
+    deactivate Repo
+
+    Main->>Service: BudgetService(repo) 객체 생성 (의존성 주입)
+    activate Service
+    Service-->>Main: service 객체 반환
+    deactivate Service
+
+    Main->>Shell: InteractiveShell(service) 객체 생성
+    activate Shell
+    Shell->>Shell: 15개 명령어 목록 및 readline 탭 자동완성 연동
+    Shell-->>Main: shell 객체 반환
+    deactivate Shell
+
+    %% 2. 셸 루프 실행 및 커맨드 처리 단계
+    Main->>Shell: shell.run() 가동
+    Shell-->>User: 웰컴 배너 및 프롬프트 (budget_app>) 출력
+
+    loop 무한 셸 루프 (while True)
+        User->>Shell: 명령어 입력 (예: add, list, search 등)
+        Shell->>Shell: parse_and_execute()를 통해 명령어 라우팅
+        
+        Shell->>Service: 알맞은 비즈니스 로직 호출
+        activate Service
+        
+        Service->>Repo: 스트리밍 읽기 또는 원자적 임시 파일 쓰기
+        activate Repo
+        Repo-->>Service: 데이터 처리 성공/실패 여부 반환
+        deactivate Repo
+        
+        Service-->>Shell: 계산 및 비즈니스 처리 결과 반환
+        deactivate Service
+        
+        Shell-->>User: 실행 결과 출력 (정렬 테이블, 성공/에러 메시지 등)
+    end
+
+```
+### 6.5 시퀀스 다이어그램 2
+
+```mermaid
+sequenceDiagram
+    actor User as 사용자
+    participant Shell as InteractiveShell (cli.py)
+    participant Decorator as @catch_errors
+    participant Service as BudgetService
+    participant Repo as FileRepository
+
+    loop 무한 셸 루프 (while True)
+        User->>Shell: 명령어 입력 (예: add, list, update 등)
+        Shell->>Decorator: parse_and_execute() 호출
+        
+        activate Decorator
+        alt 입력 오류나 예외 발생 시 (ValueError 등)
+            Decorator-->>User: [오류] 원인 및 [힌트] 출력 (프로세스 종료 없이 루프 유지)
+        else 정상 실행 흐름
+            Decorator->>Shell: 각 명령어 전용 핸들러(handle_*)로 라우팅
+            
+            alt 명령어 == 'add' (대화형 입력 및 추가)
+                Shell->>User: 날짜, 타입, 카테고리, 금액 등 순차적 질문
+                User-->>Shell: 데이터 입력 (디폴트값 덮어쓰기 지원)
+                Shell->>Service: add_transaction() 호출
+                activate Service
+                Service->>Repo: 유효성 검증 후 파일 끝에 append
+                Service-->>Shell: 생성된 고유 식별자 (TX-ID) 반환
+                deactivate Service
+                Shell-->>User: [저장 완료] 메시지 출력
+                
+            else 명령어 == 'list' / 'search' (스트리밍 및 정렬)
+                Shell->>Service: list/search_transactions(limit) 호출
+                activate Service
+                Service->>Repo: stream_transactions() 호출
+                activate Repo
+                Repo-->>Service: JSONL 파일에서 한 줄씩 데이터 yield
+                deactivate Repo
+                Service->>Service: 메모리 O(limit) 크기 버퍼에서 최신순 즉시 정렬
+                Service-->>Shell: 필터링 및 정렬된 결과 리스트 반환
+                deactivate Service
+                Shell->>Shell: 한글 폭 보정 함수(print_aligned_rows)로 테이블 렌더링
+                Shell-->>User: 깔끔한 표 형식으로 내역 출력
+                
+            else 명령어 == 'update' / 'delete' (원자적 파일 교체)
+                Shell->>User: 대상 ID 입력 요구 및 수정/삭제 컨펌(y/n)
+                User-->>Shell: 기존 값 유지(엔터) 혹은 새 값 입력
+                Shell->>Service: update/delete_transaction() 호출
+                activate Service
+                Service->>Repo: 갱신형 연산 요청
+                activate Repo
+                Repo->>Repo: 1. 임시 파일(tempfile) 생성 후 신규/정정 데이터 기록
+                Repo->>Repo: 2. os.replace를 통한 원자적 덮어쓰기 (단절 방어)
+                Repo-->>Service: 처리 성공 반환
+                deactivate Repo
+                Service-->>Shell: 결과 반환
+                deactivate Service
+                Shell-->>User: [수정/삭제 성공] 메시지 출력
+                
+            else 명령어 == 'summary' (예산 검증 로직)
+                Shell->>Service: get_monthly_summary(month) 호출
+                activate Service
+                Service->>Repo: 데이터 스트리밍으로 해당 월 수입/지출 집계
+                Service->>Repo: budgets.jsonl에서 해당 월 예산 한도액 조회
+                Service->>Service: 사용률(%) 계산 및 한도 초과 여부 검사
+                Service-->>Shell: 통계 결과 및 경고 데이터 반환
+                deactivate Service
+                Shell-->>User: 잔액, 지출 TOP 3 및 예산 초과 ⚠️ 경고 출력
+            end
+        end
+        deactivate Decorator
+    end
+
+```
+----
 ## 7. 대화형 자동완성 및 입력 편의 기능 (Autocomplete & Interactive Input Features)
 
 사용자의 키보드 입력 수를 최소화하고 빠른 이용을 돕기 위해 터미널 친화적 입력 시스템을 전격 탑재하였습니다:
