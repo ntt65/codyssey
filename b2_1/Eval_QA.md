@@ -1,6 +1,6 @@
 # budget_app 평가 및 Q&A 기술 검토서 (Eval_QA)
 
-본 문서는 가계부 애플리케이션(`budget_app`) 프로젝트의 주요 평가 항목별 기술적 구현 방식과 핵심 설계 근거를 설명하며, 해당 기능이 정의된 소스 코드 파일의 정확한 위치와 라인 번호의 절대 하이퍼링크를 매핑하여 제공합니다.
+본 문서는 가계부 애플리케이션(`budget_app`) 프로젝트의 주요 평가 항목별 기술적 구현 방식과 핵심 설계 근거를 설명하며, 해당 기능이 정의된 소스 코드 파일의 정확한 위치와 라인 번호의 절대 하이퍼링크 및 실제 구현 코드를 주석(코멘트)과 함께 제공합니다.
 
 ---
 
@@ -22,11 +22,47 @@
   * **Budget (예산 한도 설정)**: 년월(`YYYY-MM`)과 한도 액수를 딕셔너리로 설정받아 디스크에 기입합니다.
     * [service.py:L264-L278](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L264-L278)
 
+```python
+# [service.py:L41-L68] - 거래 추가 구현 코드 및 주석
+def add_transaction(self, date: str, type_str: str, category: str, amount: int, memo: str, tags: List[str]) -> str:
+    # 1. 입력 필드의 유효성(날짜 형식, 타입 검증, 금액 양수 여부 등) 통합 점검
+    self.validate_fields(date, type_str, category, amount)
+    
+    # 2. 저장소 계층으로부터 순차 증가된 신규 고유 ID 채번
+    tx_id = self.repository.get_next_transaction_id()
+    
+    # 3. 도메인 개체인 Transaction 인스턴스 구축
+    tx = Transaction(
+        id=tx_id,
+        type=type_str,
+        date=date,
+        amount=amount,
+        category=category,
+        memo=memo,
+        tags=tags
+    )
+    
+    # 4. 파일 끝에 데이터 기입(Append) 수행
+    self.repository.append_transaction(tx)
+    return tx_id
+```
+
 #### **Q2. 프로그램 재실행 후에도 데이터가 3개 이상의 파일로 분리되어 영구 유지됩니까?**
 * **A.** 네, 가계부 구동 시 총 4개의 JSONL 포맷 데이터베이스 파일로 물리적으로 완벽히 분리되어 보존됩니다.
 * **기술 구현 설명**:
   * 데이터 저장소 초기화 시, 거래 내역(`transactions.jsonl`), 카테고리(`categories.jsonl`), 월별 예산 한도(`budgets.jsonl`), 자동화 반복 템플릿(`recurring.jsonl`)의 독립 경로들을 확보하고 데이터 관리용 하위 폴더 생성을 의무적으로 수행합니다.
     * [repository.py:L33-L45](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L33-L45)
+
+```python
+# [repository.py:L33-L45] - 4대 파일 물리 분리 및 자동 초기화
+def __init__(self, data_dir: str):
+    self.data_dir = data_dir                                              # 저장 디렉터리 바인딩
+    self.transactions_path = os.path.join(data_dir, "transactions.jsonl") # 1. 거래 내역 파일 경로
+    self.categories_path = os.path.join(data_dir, "categories.jsonl")     # 2. 카테고리 파일 경로
+    self.budgets_path = os.path.join(data_dir, "budgets.jsonl")           # 3. 예산 관리 파일 경로
+    self.recurring_path = os.path.join(data_dir, "recurring.jsonl")       # 4. 반복거래 관리 파일 경로
+    self._ensure_dir()                                                    # 저장 디렉터리 자동 확인 및 생성 보장
+```
 
 #### **Q3. CSV 스키마 준수 및 오류 상황 시 스택트레이스 방지, 종료 코드 처리가 잘 되었습니까?**
 * **A.** 네, 스키마 호환, 프로그램 안전 방어, CLI 셸 복구 및 올바른 리턴 코드로의 앱 종료 처리가 설계되어 있습니다.
@@ -37,6 +73,19 @@
     * [decorators.py:L20-L47](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L20-L47)
   * **종료 코드 (Exit Code) 처리**: 애플리케이션 시작 지점에서 초기 데이터 디렉터리 바인딩 등 치명적인 구동 차단 오류가 나면 1을 반환하며 비정상 종료하고, CLI 루프에서 정상 종료 명령어(`exit`, `quit` 혹은 `Ctrl+D`)를 받았을 때는 예외 루프를 탈출해 코드로 0을 전달하고 정상적으로 마칩니다.
     * [__main__.py:L39-L48](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L39-L48) | [cli.py:L675-L701](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L675-L701)
+
+```python
+# [__main__.py:L39-L48] - 초기 구동 실패 시의 exit code 1 처리
+try:
+    repo = FileRepository(args.data_dir)                                  # 영속성 저장소 계층 인스턴스화
+    service = BudgetService(repo)                                         # 서비스 조합 및 의존성 주입
+    shell = InteractiveShell(service)                                     # CLI 콘솔 셸 빌드
+    shell.run()                                                           # 대화형 프롬프트 루프 작동
+except Exception as e:
+    print(f"[오류] 초기 구동 실패: {e}", file=sys.stderr)                   # stderr로 유효 에러 통지
+    print("[힌트] 데이터 저장 경로의 읽기/쓰기 권한을 확인해 주세요.", file=sys.stderr)
+    sys.exit(1)                                                           # 프로그램 비정상 마감 코드 반환 (1)
+```
 
 ---
 
@@ -63,6 +112,38 @@
     * `budgets.jsonl` 원자적 저장: [repository.py:L207-L225](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L207-L225)
     * `recurring.jsonl` 원자적 저장: [repository.py:L300-L317](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L300-L317)
 
+```python
+# [repository.py:L84-L127] - Atomic Write를 적용한 거래 정보의 원자적 교체
+def update_or_delete_transaction(self, tx_id: str, updated_tx: Optional[Transaction]) -> bool:
+    found = False
+    # 1. 원본 경로와 같은 디스크 위치에 안전하게 임시 파일 생성
+    temp_fd, temp_path = tempfile.mkstemp(dir=self.data_dir, prefix="transactions_tmp_", suffix=".jsonl")
+    try:
+        with os.fdopen(temp_fd, "w", encoding="utf-8") as out_f:
+            if os.path.exists(self.transactions_path):
+                with open(self.transactions_path, "r", encoding="utf-8") as in_f:
+                    for line in in_f:
+                        line = line.strip()
+                        if not line: continue
+                        data = json.loads(line)
+                        if data.get("id") == tx_id: # 대상 ID 발견
+                            found = True
+                            if updated_tx is not None: # 수정 기입 (None이면 기입을 안하여 삭제 효과)
+                                out_f.write(json.dumps(updated_tx.to_dict(), ensure_ascii=False) + "\n")
+                        else:
+                            out_f.write(line + "\n") # 타겟 외 항목은 원문 그대로 스트리밍 기입
+        if found:
+            # 2. 임시 파일 기록이 성공하면 원본 파일과 원자적 치환(OS atomic swap) 단행
+            os.replace(temp_path, self.transactions_path)
+        else:
+            os.remove(temp_path) # 미발견 시 조용히 소각
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path) # 실패 시 임시 잔존 찌꺼기 완벽 클린업
+        raise e
+    return found
+```
+
 ---
 
 ### 항목 3: 고급 파이썬 문법 활용 (PASS)
@@ -73,6 +154,23 @@
   * `stream_transactions` 메서드는 파일 전체 텍스트 라인을 `readlines()`로 메모리에 한꺼번에 배열 적재하지 않고, 한 줄을 탐색해 가벼운 Transaction 도메인 객체로 파싱하고 실시간 `yield` 한 뒤 점유 메모리를 내보냅니다. 이로써 저장된 내역 크기가 수십만 줄 이상이 되더라도 데이터를 읽을 때 점유 메모리를 상시 일정한 O(1) 범위로 유지하는 절대적 이점이 생깁니다.
     * [repository.py:L53-L72](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L72)
 
+```python
+# [repository.py:L53-L72] - yield 스트리밍 기반 거래 정보 로딩
+def stream_transactions(self) -> Generator[Transaction, None, None]:
+    if not os.path.exists(self.transactions_path):
+        return
+    with open(self.transactions_path, "r", encoding="utf-8") as f:
+        for line in f: # 한 번에 한 라인씩 메모리에 적재 (메모리 버퍼 낭비 방지)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                yield Transaction.from_dict(data) # yield 제너레이터를 사용하여 실시간 스트리밍 제공
+            except (json.JSONDecodeError, KeyError):
+                continue # 손상 데이터 라인은 무시하고 다음 줄 진행
+```
+
 #### **Q2. 데코레이터로 분리한 공통 기능은 무엇이며, "왜" 분리했습니까?**
 * **A.** 로깅, 소요 시간 계측, 인터페이스 영역 오류 안전 차단과 같은 횡단 관심사(Aspects)들을 핵심 가계부 제어 연산 로직과 철저히 나누어 결합도를 낮추기 위해 분리했습니다.
 * **기술 구현 설명**:
@@ -82,6 +180,28 @@
     * [decorators.py:L49-L66](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L49-L66)
   * **@log_action**: 기능의 진입 및 마감 정보 로깅
     * [decorators.py:L68-L86](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L68-L86)
+
+```python
+# [decorators.py:L20-L47] - 안전 프롬프트 환경을 위한 @catch_errors 데코레이터
+def catch_errors(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)                                      # 실행 영역
+        except ValueError as e:                                               # 데이터 규칙 에러 예외 격리
+            print(f"[오류] {e}", file=sys.stderr)                              # 상세 오류 출력
+            print("[힌트] 입력 형식을 확인하고 유효한 값을 입력해 주세요.", file=sys.stderr)
+        except FileNotFoundError as e:                                        # 파일 손실 에러 격리
+            print(f"[오류] 파일을 찾을 수 없습니다: {e}", file=sys.stderr)
+            print("[힌트] 파일 경로가 정확한지, 또는 파일이 실제로 존재하는지 확인해 주세요.", file=sys.stderr)
+        except PermissionError as e:                                          # IO 권한 에러 격리
+            print(f"[오류] 파일 접근 권한이 없습니다: {e}", file=sys.stderr)
+            print("[힌트] 대상 파일 또는 폴더의 쓰기/읽기 권한을 확인해 주세요.", file=sys.stderr)
+        except Exception as e:                                                # 예측 외 오류 포착
+            print(f"[오류] 실행 중 예외가 발생했습니다: {e}", file=sys.stderr)
+            print("[힌트] 입력 파라미터를 다시 확인하시거나 저장 데이터가 손상되지 않았는지 점검해 주세요.", file=sys.stderr)
+    return wrapper
+```
 
 #### **Q3. 타입 힌트를 적용해 얻는 이점은 무엇입니까?**
 * **A.** 코드 자가 문서화, 규약 안정화, 그리고 사후 타입 위반으로 인한 런타임 참사를 예방하기 위해 전체 구조에 명시적인 정적 타입 힌트를 매핑했습니다.
@@ -107,11 +227,64 @@
   * 이를 개선하기 위해 전체 리스트화를 배제하고, 데이터를 읽어 들이며 사용자가 출력하고자 희망하는 고정된 타겟 개수(limit)만큼만 값을 저장할 수 있는 최신순 정렬 삽입 공간인 **정렬 버퍼(Sorted Insertion Buffer)** 기법을 도입했습니다. 새로운 스트림 행을 정렬된 위치에 꽂아 넣고 배열 크기가 limit을 넘어갈 때 버퍼 맨 뒷단에 머무는 가장 오래된 요소를 `pop()`하여 탈락시키는 $O(\text{limit})$ 메모리 보존 정렬을 구현하여 병목을 우회했습니다.
     * [service.py:L70-L96](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L70-L96)
 
+```python
+# [service.py:L70-L96] - O(limit) 정렬 삽입 버퍼를 활용한 최신 거래 추출
+def list_transactions(self, limit: int) -> List[Transaction]:
+    top_txs: List[Transaction] = []                                       # 크기 limit 크기로 통제될 정렬 리스트
+    for tx in self.repository.stream_transactions():                      # 1. 파일 한 줄씩 제너레이터 스트리밍 로드
+        inserted = False
+        for i, existing in enumerate(top_txs):
+            # 2. 날짜가 더 최신이거나 날짜가 같으면 ID가 큰 순(내림차순)으로 들어갈 인덱스 탐색
+            if tx.date > existing.date or (tx.date == existing.date and tx.id > existing.id):
+                top_txs.insert(i, tx)                                     # 정렬 위치에 삽입
+                inserted = True
+                break
+        if not inserted:
+            top_txs.append(tx)                                            # 조건 미달 시 가장 뒤에 첨부
+        
+        # 3. 누적 개수가 limit 허용량을 초과하면 즉시 맨 뒤의 가장 낡은 요소를 pop()
+        # -> 메모리 점유율을 언제나 O(limit)로 고정하여 병목 및 크래시 예방
+        if len(top_txs) > limit:
+            top_txs.pop()
+            
+    return top_txs
+```
+
 #### **Q3. import CSV 시 깨진 행이 섞여 있다면 "어떻게" 신뢰를 유지할 것입니까?**
 * **A.** 파일 전체 연산 실패 및 롤백으로 작업을 중단시키는 무리한 조치 대신, 깨지지 않은 정상 데이터만 부분적으로 로드(Partial Success)해 영속화하고, 최종 수행 통계를 명확히 밝혀 신뢰를 확보합니다.
 * **기술 구현 설명**:
   * 외부 CSV 데이터를 받아 기입하는 로직 내부에 개별 행 순회 감시 유효성 필터를 부착합니다. 규칙에 맞지 않는 불량 행이 발견되면, 시스템이 튕기거나 오류 트레이스를 터트리지 않고 해당 줄만 조용히 수량 스킵(`skipped += 1`)을 한 뒤 정상적인 행들만 파일 저장을 완수합니다. 연산 종료 직후, 정상 삽입 개수와 무시된 불량 행의 총 수치를 CLI UI 화면에 리포트하여 사용자 편의와 가독성을 지킵니다.
     * [service.py:L370-L439](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L370-L439)
+
+```python
+# [service.py:L370-L439] - 깨진 행 무시 및 결과 부분 성공 리포트 구현 일부
+def import_from_csv(self, filepath: str) -> Tuple[int, int]:
+    # ... CSV 파일 및 컬럼 검증 수행 ...
+    imported = 0
+    skipped = 0
+    with open(filepath, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 공백 정규화 기입
+            clean_row = {k.strip(): v.strip() for k, v in row.items() if k is not None and v is not None}
+            # ... 데이터 파싱 ...
+            
+            is_valid = True
+            try:
+                # 개별 행 단위로 엄밀한 비즈니스 룰 유효성 정밀 검증
+                self.validate_fields(date_str, type_str, category_str, int(amount_str))
+            except Exception:
+                is_valid = False # 유효하지 않은 포맷 발견
+            
+            if not is_valid:
+                skipped += 1 # 튕기지 않고 스킵 카운트만 올린 뒤 다음 루프 진행
+                continue
+            
+            # ... 통과 데이터만 파일 쓰기 완료 ...
+            imported += 1
+            
+    return imported, skipped # 최종 통계 리턴
+```
 
 ---
 
@@ -126,6 +299,44 @@
     * 템플릿 생성: [service.py:L491-L529](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L491-L529)
     * 일괄 생성 및 중복 차단: [service.py:L548-L614](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L548-L614)
 
+```python
+# [service.py:L548-L614] - 반복 거래 일괄 생성 시의 중복 생성 검사 및 방지
+def generate_recurring_transactions(self, month: str) -> int:
+    self.validate_month_format(month)
+    # ... 마지막 일 계산 및 템플릿 로드 ...
+    
+    # 1. 중복 생성 검사를 위해 타겟 연월로 시작하는 내역 메모리 수집
+    existing_txs = []
+    for tx in self.repository.stream_transactions():
+        if tx.date.startswith(month + "-"):
+            existing_txs.append(tx)
+            
+    generated_count = 0
+    # ... 다음 ID 발급 준비 ...
+    
+    for t in templates:
+        actual_day = min(t.day, last_day)
+        date_str = f"{month}-{actual_day:02d}"
+        
+        # 2. 날짜, 타입, 액수, 카테고리, 메모가 일치하고 'recurring' 태그를 포함했는지 여부로 중복 필터링
+        is_duplicate = False
+        for etx in existing_txs:
+            if (etx.date == date_str and
+                etx.type == t.type and
+                etx.category == t.category and
+                etx.amount == t.amount and
+                etx.memo == t.memo and
+                "recurring" in etx.tags):
+                is_duplicate = True # 중복 발견
+                break
+                
+        if not is_duplicate: # 중복되지 않은 경우에만 자동 거래 기입
+            # ... Transaction 생성 및 append_transaction 기입 ...
+            generated_count += 1
+            
+    return generated_count
+```
+
 ---
 
 ### 추가 어필 항목: CLI 사용성 고도화 및 다국어 정렬 테이블 (Superb UX)
@@ -134,6 +345,48 @@
 * **설명**: 한글 입력 상태에서 터미널 CLI에 명령어를 작성할 때 한타 오타가 나서 오류가 발생하거나 셸이 꼬이는 불편을 개선하기 위해, 별도의 외부 라이브러리 연동 없이 파이썬 표준 라이브러리인 `ctypes`를 활용하여 macOS 시스템 내장 카본(Carbon) 라이브러리의 TIS(Text Input Source) C API를 직접 다이렉트 바인딩해 명령 대기 진입 전 입력 장치 환경을 US English로 강제 전환해 줍니다.
 * [cli.py:L38-L83](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L38-L83)
 
+```python
+# [cli.py:L38-L83] - macOS TIS API를 이용한 강제 한영 변환 로직
+def switch_to_english():
+    try:
+        # CoreFoundation 및 Carbon 프레임워크 라이브러리 로드
+        cf_path = ctypes.util.find_library('CoreFoundation')
+        cf = ctypes.cdll.LoadLibrary(cf_path)
+        carbon_path = ctypes.util.find_library('Carbon')
+        carbon = ctypes.cdll.LoadLibrary(carbon_path)
+        
+        # ... API 파라미터 매핑 아규먼트 설정 ...
+        
+        # 영문 언어 식별자 "en"으로 CFString 타입 조립
+        utf8_str = cf.CFStringCreateWithCString(None, b"en", 0x08000100)
+        
+        # Carbon API 호출하여 영문 입력 소스 포인터 복사 및 선택 전환
+        source = carbon.TISCopyInputSourceForLanguage(utf8_str)
+        cf.CFRelease(utf8_str)
+        
+        if not source:
+            return False
+            
+        status = carbon.TISSelectInputSource(source) # 시스템 입력 전환 실행
+        cf.CFRelease(source)
+        return status == 0
+    except Exception:
+        return False
+```
+
 #### **2. CJK (한글/중국어/일어) 2바이트 실제 화면 크기 보정 터미널 정렬 테이블**
 * **설명**: 한글 문자는 터미널 렌더러 출력 환경 상 2칸의 영역을 소비하지만 파이썬의 `len()` 함수는 단순 아스키와 동일하게 크기를 1로 산출하여, 일반적인 텍스트 표를 출력할 때 컬럼이 비뚤어지거나 무너집니다. 이를 교정하기 위해 `unicodedata.east_asian_width` 모듈로 와이드 캐릭터를 자동 식별하여 한글은 2바이트 공간을 가중 연산하여 깨지지 않는 격자 표 드로잉 테이블 렌더러를 내장했습니다.
 * [cli.py:L295-L313](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L295-L313) | [cli.py:L315-L330](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L315-L330) | [cli.py:L331-L364](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L331-L364)
+
+```python
+# [cli.py:L295-L313] - east_asian_width 활용 한글/아스키 가폭 계산
+def visual_len(s: str) -> int:
+    width = 0
+    for char in s:
+        # 유니코드의 동아시아 너비 분류가 Wide(W), Fullwidth(F), Ambiguous(A)인 경우 터미널 가폭 2 계산
+        if unicodedata.east_asian_width(char) in ('W', 'F', 'A'):
+            width += 2
+        else:
+            width += 1
+    return width
+```
