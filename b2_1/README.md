@@ -366,6 +366,32 @@ def visual_len(s: str) -> int:
     return width
 ```
 
+#### **7) 타입 힌트 (Type Hinting)를 적용한 인터페이스 명세**
+* **용도**: 런타임 전 컴파일 단계(정적 린트)에서 타입 위반 버그를 예방하고, 개발자 간의 명확한 데이터 약속(Contract) 명세서이자 가독성 높은 자가 문서 역할을 담당합니다.
+* **소스 코드**: [models.py:L18-L30](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py#L18-L30) | [repository.py:L53-L60](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L60) | [service.py:L370-L380](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L370-L380)
+```python
+# 1. 데이터 구조 정의(models.py) 시 제네릭과 primitive 타입 명시
+@dataclass
+class Transaction:
+    id: str
+    type: str                                     # "income" 또는 "expense" 분류
+    date: str                                     # YYYY-MM-DD 날짜
+    amount: int                                   # 양의 정수 금액
+    category: str                                 # 가계부 카테고리명
+    memo: str = ""                                # 선택 메모 기본값
+    tags: List[str] = field(default_factory=list) # List[str] 제네릭 활용 태그 명시
+
+# 2. 제너레이터 스트리밍(repository.py) 시 yield 데이터 타입 명시
+# Generator[YieldType, SendType, ReturnType] 순서로 명세화
+def stream_transactions(self) -> Generator[Transaction, None, None]:
+    ...
+
+# 3. 비즈니스 콤포넌트(service.py) 복합 데이터 구조 튜플 반환 선언
+def import_from_csv(self, filepath: str) -> Tuple[int, int]:
+    # (성공 건수, 스킵 건수) 튜플 형태 리턴 타입 명시
+    ...
+```
+
 ---
 
 ## 6. 구조 및 설계 다이어그램 (Architecture Diagrams)
