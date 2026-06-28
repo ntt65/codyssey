@@ -4,6 +4,37 @@
 
 ---
 
+  @dataclass
+    class Transaction:
+        id: str
+        type: str
+        date: str
+        amount: int
+        category: str
+        memo: str = ""
+        tags: List[str] = field(default_factory=list)
+
+  • 동작 방식:  @dataclass  데코레이터를 위에 적어두면, 파이썬이 생성자( __init__ ), 문자열 표현( __repr__ ), 동등성 비교( __eq__ ) 메서드를
+  백그라운드에서 자동으로 구현해 줍니다.
+  • 코드가 놀라울 정도로 깔끔해지고, 직관적으로 데이터의 형태를 파악할 수 있습니다.
+  ──────
+  ### 💡 dataclass의 4대 핵심 장점
+
+  1. 생성자 자동 완성 ( __init__ ):
+      •  tx = Transaction("TX-000001", "expense", "2026-06-28", 10000, "food")  형태로 입력값만 넣어주면 바로 필드에 매핑되어 주입됩니다.
+  2. 보기 좋은 디버깅 출력 ( __repr__ ):
+      • 일반 클래스 객체를  print(tx)  하면  <__main__.Transaction object at 0x1034c...>  같이 알아보기 힘든 메모리 주소가 나오지만, dataclass는
+      Transaction(id='TX-000001', type='expense', ...) 처럼 안에 담긴 값들을 눈으로 볼 수 있게 예쁘게 출력해 줍니다.
+  3. 쉬운 동등성 비교 ( __eq__ ):
+      •  tx1 == tx2 를 수행하면, 파이썬이 내부 필드 값들을 하나하나 대조하여 모두 같을 때만  True 를 리턴해 줍니다.
+  4. 타입 안정성 (Type Hint):
+      • 필드 뒤에  : str ,  : int 와 같은 타입 힌트를 반드시 적어주어야 하므로, 개발자가 협업하거나 코드를 검토할 때 어떤 데이터가 오가는지 명확하게
+      규격화됩니다.
+
+
+  우리 가계부 애플리케이션( budget_app )의 models.py에서는 이  dataclass 를 사용하여 **개별 거래 내역( Transaction )**과 **정기 반복 템플릿(
+  RecurringTemplate )**의 데이터 형태를 엄격하게 정의하고 안전하게 사용하고 있습니다!
+
 ## 1. 제너레이터(Generator)와 메모리 최적화
 
 ### 💡 핵심 개념
