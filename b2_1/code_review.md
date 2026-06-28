@@ -141,7 +141,7 @@
 ### 2.1 클래스 구조 (Class Diagram)
 ```mermaid
 classDiagram
-    class Transaction {
+    class Transaction["models.py:Transaction"] {
         +str id
         +str type
         +str date
@@ -152,7 +152,7 @@ classDiagram
         +to_dict() dict
         +from_dict(dict data) Transaction$
     }
-    class RecurringTemplate {
+    class RecurringTemplate["models.py:RecurringTemplate"] {
         +str id
         +str type
         +str category
@@ -163,7 +163,7 @@ classDiagram
         +to_dict() dict
         +from_dict(dict data) RecurringTemplate$
     }
-    class FileRepository {
+    class FileRepository["repository.py:FileRepository"] {
         +str data_dir
         +str transactions_path
         +str categories_path
@@ -179,7 +179,7 @@ classDiagram
         +get_next_transaction_id() str
         +get_next_recurring_id() str
     }
-    class BudgetService {
+    class BudgetService["service.py:BudgetService"] {
         -FileRepository repository
         +add_transaction(str date, str type_str, str category, int amount, str memo, List~str~ tags) str
         +list_transactions(int limit) List~Transaction~
@@ -200,7 +200,7 @@ classDiagram
         +remove_recurring_template(str template_id) bool
         +generate_recurring_transactions(str month) int
     }
-    class InteractiveShell {
+    class InteractiveShell["cli.py:InteractiveShell"] {
         -BudgetService service
         +run()
         +parse_and_execute(str command, List~str~ args)
