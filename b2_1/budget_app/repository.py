@@ -95,6 +95,7 @@ class FileRepository:
             bool: 대상을 찾아 성공적으로 연산을 수행했는지 여부 (성공: True, 대상 없음: False)
         """
         found = False  # 대상 거래 ID의 존재 및 처리 성공 유무 판별 플래그
+        # tempfile.mkstemp()는 운영체제가 알아서 transactions_tmp_a1b2c3.jsonl과 같이 무작위 난수를 붙여 세상에 단 하나뿐인 절대 겹치지 않는 고유한 임시 파일명을 생성
         temp_fd, temp_path = tempfile.mkstemp(dir=self.data_dir, prefix="transactions_tmp_", suffix=".jsonl")  # 안전 구역에 임시 파일 생성
         try:
             with os.fdopen(temp_fd, "w", encoding="utf-8") as out_f:  # 획득한 파일 디스크립터를 기반으로 쓰기 전용 파일 객체 오픈

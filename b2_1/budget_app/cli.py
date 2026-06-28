@@ -134,6 +134,7 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
         prompt_suffix = f" [{default_value}]: " if default_value else ": "
         res = input(prompt_text + prompt_suffix).strip()
         if not res and default_value:
+            print(f"[정보] 입력이 생략되어 기본값 '{default_value}'(으)로 적용되었습니다.")
             return default_value
         return res
 
@@ -149,6 +150,7 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
     if not sys.stdin.isatty():
         res = input(full_prompt).strip()
         if not res and default_value:
+            print(f"[정보] 입력이 생략되어 기본값 '{default_value}'(으)로 적용되었습니다.")
             return default_value
         return res
 
@@ -203,6 +205,7 @@ def prompt_choices(prompt_text: str, choices: List[str], default_value: Optional
             sys.stdout.write("\n")
             sys.stdout.flush()
             if not current_text and default_value:
+                print(f"[정보] 입력이 생략되어 기본값 '{default_value}'(으)로 적용되었습니다.")
                 return default_value                                          # 아무것도 안 치고 치면 기본값 탑재
             return current_text
             
@@ -738,6 +741,183 @@ class InteractiveShell:
             print(f"[오류] 알 수 없는 명령어입니다: '{command}'")
             print("[힌트] 전체 명령어 목록을 확인하려면 'help'를 입력해 주세요.")
 
+    @catch_errors
+    def execute_command(self, command: str, args):
+        """
+        명령줄 인자(CLI) 모드로 전달된 명령을 분기하여 즉시 실행하고 종료합니다.
+        """
+        if command == "add":
+            self.handle_add()
+        elif command == "list":
+            self.handle_list([str(args.limit)])
+        elif command == "search":
+            txs = self.service.search_transactions(
+                from_date=getattr(args, "from_date", None),
+                to_date=getattr(args, "to_date", None),
+                category=getattr(args, "category", None),
+                type_str=getattr(args, "type", None),
+                query=getattr(args, "q", None),
+                tag=getattr(args, "tag", None),
+                limit=50
+            )
+            if not txs:
+                print("검색 조건에 맞는 거래 내역이 없습니다.")
+                return
+            headers = ["id", "date", "type", "category", "amount", "memo", "tags"]
+            rows = []
+            for tx in txs:
+                tags_str = ",".join(tx.tags) if tx.tags else ""
+                rows.append([tx.id, tx.date, tx.type, tx.category, f"{tx.amount:,}원", tx.memo, tags_str])
+            print_aligned_rows(headers, rows)
+        elif command == "summary":
+            month = getattr(args, "month", None)
+            if not month:
+                this_month = datetime.date.today().strftime("%Y-%m")
+                month = self.prompt_validated_input("- 요약할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
+            if not month:
+                return
+            
+            top = getattr(args, "top", 3)
+            summary = self.service.get_monthly_summary(month, top)
+            if not summary["has_data"]:
+                print("데이터 없음")
+                return
+            print("==================================================")
+            print(f"   📊 {month} 재정 요약 리포트")
+            print("==================================================")
+            print(f"- 총 수입: {summary['total_income']:,}원")
+            print(f"- 총 지출: {summary['total_expense']:,}원")
+            print(f"- 잔액: {summary['balance']:,}원")
+            
+            budget = summary["budget"]
+            if budget is not None:
+                usage_rate = (summary["total_expense"] / budget) * 100 if budget > 0 else 0
+                print(f"- 책정 예산: {budget:,}원 (사용률: {usage_rate:.1f}%)")
+                if summary["total_expense"] > budget:
+                    over = summary["total_expense"] - budget
+                    print(f"⚠️ [경고] 이번 달 예산을 {over:,}원 초과해 지출했습니다!")
+            
+            print(f"\n[ 지출 TOP {top} 카테고리 ]")
+            total_exp = summary["total_expense"]
+            for idx, (cat, amt) in enumerate(summary["top_categories"], 1):
+                pct = (amt / total_exp) * 100 if total_exp > 0 else 0
+                print(f"{idx}) {cat} : {amt:,}원 ({pct:.1f}%)")
+            print("==================================================")
+        elif command == "budget":
+            if args.subcommand == "set":
+                month = getattr(args, "month", None)
+                if not month:
+                    this_month = datetime.date.today().strftime("%Y-%m")
+                    month = self.prompt_validated_input("- 예산을 책정할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
+                
+                amount = getattr(args, "amount", None)
+                if amount is None:
+                    amount_str = self.prompt_validated_input("- 한도 금액 (0 이상 정수)", validate_amount, None, ["500000", "1000000"])
+                    if not amount_str:
+                        return
+                    amount = int(amount_str)
+                
+                if not month:
+                    return
+                self.service.set_budget(month, amount)
+                print(f"[저장 완료] {month} 예산 {amount:,}원 설정 완료.")
+            else:
+                self.handle_budget()
+        elif command == "category":
+            if args.subcommand == "list":
+                categories = self.service.list_categories()
+                for cat in categories:
+                    print(f"- {cat}")
+            elif args.subcommand == "add":
+                name = getattr(args, "name", None)
+                if not name:
+                    name = input("카테고리명: ").strip()
+                if not name:
+                    print("[오류] 카테고리명을 입력해야 합니다.")
+                    return
+                self.service.add_category(name)
+                print(f"[저장 완료] category={name}")
+            elif args.subcommand == "remove":
+                name = getattr(args, "name", None)
+                categories = self.service.list_categories()
+                if not name:
+                    name = self.prompt_validated_input("- 삭제할 카테고리명", lambda x: (True, "", "") if x in categories else (False, "등록되지 않은 카테고리입니다.", ""), None, categories)
+                if not name:
+                    return
+                self.service.remove_category(name)
+                print(f"[삭제 완료] 카테고리 '{name}'이 목록에서 안전하게 제거되었습니다.")
+            else:
+                self.handle_category()
+        elif command == "update":
+            tx_id = getattr(args, "id", None)
+            self.handle_update(["--id", tx_id] if tx_id else [])
+        elif command == "delete":
+            tx_id = getattr(args, "id", None)
+            self.handle_delete(["--id", tx_id] if tx_id else [])
+        elif command == "import":
+            filepath = getattr(args, "filepath", None)
+            self.handle_import(["--from", filepath] if filepath else [])
+        elif command == "export":
+            filepath = getattr(args, "out", None)
+            if not filepath:
+                filepath = self.prompt_validated_input("- 내보낼 CSV 파일 경로", lambda x: (True, "", "") if x else (False, "내보낼 CSV 파일 경로가 필요합니다.", ""), "backup.csv", ["backup.csv"])
+            if not filepath:
+                return
+            
+            month = getattr(args, "month", None)
+            from_date = getattr(args, "from_date", None)
+            to_date = getattr(args, "to_date", None)
+            if not month and not (from_date and to_date):
+                choice = self.prompt_validated_input("- 필터 방식 선택 (1: 월별, 2: 기간, 엔터: 필터 없음)", lambda x: (True, "", "") if x in ["1", "2", ""] else (False, "1 또는 2 중 선택해 주세요.", ""), "", ["1", "2"])
+                if choice == "1":
+                    this_month = datetime.date.today().strftime("%Y-%m")
+                    month = self.prompt_validated_input("내보낼 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
+                elif choice == "2":
+                    from_date = self.prompt_validated_input("시작일 (YYYY-MM-DD)", validate_date)
+                    to_date = self.prompt_validated_input("종료일 (YYYY-MM-DD)", validate_date)
+            
+            print("[내보내기 진행 중...]")
+            count = self.service.export_to_csv(filepath, month=month, from_date=from_date, to_date=to_date)
+            print(f"[완료] {filepath} 파일로 {count}건의 기록을 성공적으로 추출 및 저장했습니다.")
+        elif command == "backup":
+            self.handle_backup()
+        elif command == "recurring":
+            if args.subcommand == "list":
+                templates = self.service.load_recurring_templates()
+                if not templates:
+                    print("등록된 반복 내역이 없습니다.")
+                    return
+                headers = ["id", "type", "category", "amount", "day", "memo", "tags"]
+                rows = []
+                for t in templates:
+                    tags_str = ",".join(t.tags) if t.tags else ""
+                    rows.append([t.id, t.type, t.category, f"{t.amount:,}원", f"매월 {t.day}일", t.memo, tags_str])
+                print_aligned_rows(headers, rows)
+            elif args.subcommand == "add":
+                print("[신규 반복 템플릿 등록]")
+                type_str = self.prompt_validated_input("- 타입", validate_type, "expense", ["income", "expense"])
+                category = self.prompt_category_interactive("food")
+                amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
+                day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, "25", ["25", "20", "10"]))
+                memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "월세", ["월세", "보험금", "기본급"])
+                tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "고정비", ["고정비", "월세", "급여"])
+                tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
+                
+                new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)
+                print(f"[저장 완료] template_id={new_id}")
+            elif args.subcommand == "generate":
+                month = getattr(args, "month", None)
+                if not month:
+                    this_month = datetime.date.today().strftime("%Y-%m")
+                    month = self.prompt_validated_input("- 자동 생성할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
+                if not month:
+                    return
+                print("[처리 진행 중...]")
+                count = self.service.generate_recurring_transactions(month)
+                print(f"[처리 완료] {month} 월에 총 {count}건의 반복 거래 내역을 가계부에 자동 추가했습니다.")
+            else:
+                self.handle_recurring()
+
     # --- Suggestion Generator Helpers ---
 
     def get_all_transaction_ids(self) -> List[str]:
@@ -869,6 +1049,9 @@ class InteractiveShell:
         
         tx_id = self.service.add_transaction(date, type_str, category, amount, memo, tags) # 서비스 기입 호출
         print(f"[저장 완료] id={tx_id}")
+        headers = ["id", "date", "type", "category", "amount", "memo", "tags"]
+        rows = [[tx_id, date, type_str, category, f"{amount:,}원", memo, ",".join(tags)]]
+        print_aligned_rows(headers, rows)
 
     @catch_errors
     def handle_list(self, args: List[str]):
@@ -996,32 +1179,34 @@ class InteractiveShell:
         """
         [category] 가계부 카테고리 서브 관리 메뉴
         """
-        print("[카테고리 설정 관리]")
-        print("1. 등록된 카테고리 목록 조회")
-        print("2. 신규 카테고리 추가")
-        print("3. 기존 카테고리 삭제")
-        
-        choice = self.prompt_validated_input("메뉴 선택", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
-        if not choice:
-            return
+        while True:
+            print("\n[카테고리 설정 관리]")
+            print("1. 등록된 카테고리 목록 조회")
+            print("2. 신규 카테고리 추가")
+            print("3. 기존 카테고리 삭제")
+            print("엔터: 상위 메뉴로 이동")
             
-        categories = self.service.list_categories()
-        if choice == "1":
-            for cat in categories:
-                print(f"- {cat}")
-        elif choice == "2":
-            name = input("- 추가할 카테고리명: ").strip()
-            if not name:
-                print("[오류] 카테고리명을 입력해야 합니다.")
-                return
-            self.service.add_category(name)
-            print(f"[저장 완료] category={name}")
-        elif choice == "3":
-            name = self.prompt_validated_input("- 삭제할 카테고리명", lambda x: (True, "", "") if x in categories else (False, "등록되지 않은 카테고리입니다.", ""), None, categories)
-            if not name:
-                return
-            self.service.remove_category(name)
-            print(f"[삭제 완료] 카테고리 '{name}'이 목록에서 안전하게 제거되었습니다.")
+            choice = self.prompt_validated_input("메뉴 선택", lambda x: (True, "", "") if x in ["1", "2", "3", ""] else (False, "1, 2, 3 중 선택해 주세요.", ""), "", ["1", "2", "3"])
+            if not choice:
+                break
+                
+            categories = self.service.list_categories()
+            if choice == "1":
+                for cat in categories:
+                    print(f"- {cat}")
+            elif choice == "2":
+                name = input("- 추가할 카테고리명: ").strip()
+                if not name:
+                    print("[오류] 카테고리명을 입력해야 합니다.")
+                    continue
+                self.service.add_category(name)
+                print(f"[저장 완료] category={name}")
+            elif choice == "3":
+                name = self.prompt_validated_input("- 삭제할 카테고리명", lambda x: (True, "", "") if x in categories else (False, "등록되지 않은 카테고리입니다.", ""), None, categories)
+                if not name:
+                    continue
+                self.service.remove_category(name)
+                print(f"[삭제 완료] 카테고리 '{name}'이 목록에서 안전하게 제거되었습니다.")
 
     @catch_errors
     def handle_update(self, args: List[str]):
@@ -1062,6 +1247,9 @@ class InteractiveShell:
         success = self.service.update_transaction(tx_id, date, type_str, category, amount, memo, tags)
         if success:
             print(f"[수정 성공] id={tx_id}")
+            headers = ["id", "date", "type", "category", "amount", "memo", "tags"]
+            rows = [[tx_id, date, type_str, category, f"{amount:,}원", memo, ",".join(tags)]]
+            print_aligned_rows(headers, rows)
         else:
             print(f"[수정 실패] id={tx_id} 를 업데이트하지 못했습니다.")
 
@@ -1109,12 +1297,12 @@ class InteractiveShell:
             # 현재 작업 폴더 내 CSV 목록을 긁어와 자동완성 후보로 지원
             csv_files = [f for f in os.listdir('.') if f.endswith('.csv') and os.path.isfile(f)]
             if csv_files:
-                filepath = self.prompt_validated_input("- 가져올 CSV 파일 경로", lambda x: (True, "", "") if x else (False, "가져올 CSV 파일 경로가 필요합니다.", ""), None, csv_files)
+                default_file = "backup.csv" if "backup.csv" in csv_files else csv_files[0]
+                filepath = self.prompt_validated_input("- 가져올 CSV 파일 경로", lambda x: (True, "", "") if x else (False, "가져올 CSV 파일 경로가 필요합니다.", ""), default_file, csv_files)
             else:
-                filepath = input("- 가져올 CSV 파일 경로 (예: data.csv): ").strip()
+                filepath = input("- 가져올 CSV 파일 경로 (backup.csv): ").strip()
                 if not filepath:
-                    print("[오류] 가져올 CSV 파일 경로가 필요합니다.")
-                    return
+                    filepath = "backup.csv"
 
         print("[가져오기 진행 중...]")
         imported, skipped = self.service.import_from_csv(filepath)
@@ -1163,57 +1351,60 @@ class InteractiveShell:
         """
         [recurring] 매월 반복 거래(고정비/고정수입)에 대한 일괄 설정 및 등록/해제 서브메뉴입니다.
         """
-        print("[매월 반복 고정 거래 관리 메뉴]")
-        print("1. 등록된 반복 템플릿 목록 조회")
-        print("2. 신규 반복 템플릿 등록")
-        print("3. 기존 반복 템플릿 삭제")
-        print("4. 특정 월 반복 거래 일괄 생성")
-        
-        choice = self.prompt_validated_input("선택", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
-        if not choice:
-            return
+        while True:
+            print("\n[매월 반복 고정 거래 관리 메뉴]")
+            print("1. 등록된 반복 템플릿 목록 조회")
+            print("2. 신규 반복 템플릿 등록")
+            print("3. 기존 반복 템플릿 삭제")
+            print("4. 특정 월 반복 거래 일괄 생성")
+            print("엔터: 상위 메뉴로 이동")
             
-        if choice == "1":
-            templates = self.service.load_recurring_templates()
-            if not templates:
-                print("등록된 반복 내역이 없습니다.")
-                return
-            headers = ["id", "type", "category", "amount", "day", "memo", "tags"]
-            rows = []
-            for t in templates:
-                tags_str = ",".join(t.tags) if t.tags else ""
-                rows.append([t.id, t.type, t.category, f"{t.amount:,}원", f"매월 {t.day}일", t.memo, tags_str])
-            print_aligned_rows(headers, rows)
-            
-        elif choice == "2":
-            print("[신규 반복 템플릿 등록]")
-            type_str = self.prompt_validated_input("- 타입", validate_type, "expense", ["income", "expense"])
-            category = self.prompt_category_interactive("food")
-            amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
-            day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, "25", ["25", "20", "10"]))
-            memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "월세", ["월세", "보험금", "기본급"])
-            tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "고정비", ["고정비", "월세", "급여"])
-            tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
-            
-            new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)
-            print(f"[저장 완료] template_id={new_id}")
-            
-        elif choice == "3":
-            existing_rec_ids = self.get_all_recurring_ids()
-            t_id = self.prompt_validated_input("- 삭제할 템플릿 ID (REC-XXXXXX)", lambda x: (True, "", "") if x in existing_rec_ids else (False, "존재하지 않는 템플릿 ID입니다.", ""), None, existing_rec_ids)
-            if not t_id:
-                return
-            success = self.service.remove_recurring_template(t_id)
-            if success:
-                print(f"[삭제 성공] template_id={t_id}")
-            else:
-                print(f"[삭제 실패] template_id={t_id} 삭제 오류")
+            choice = self.prompt_validated_input("선택", lambda x: (True, "", "") if x in ["1", "2", "3", "4", ""] else (False, "1, 2, 3, 4 중 선택해 주세요.", ""), "", ["1", "2", "3", "4"])
+            if not choice:
+                break
                 
-        elif choice == "4":
-            this_month = datetime.date.today().strftime("%Y-%m")
-            month = self.prompt_validated_input("- 자동 생성할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
-            print("[처리 진행 중...]")
-            count = self.service.generate_recurring_transactions(month)
-            print(f"[처리 완료] {month} 월에 총 {count}건의 반복 거래 내역을 가계부에 자동 추가했습니다.")
-        else:
-            print("[오류] 잘못된 선택입니다.")
+            if choice == "1":
+                templates = self.service.load_recurring_templates()
+                if not templates:
+                    print("등록된 반복 내역이 없습니다.")
+                    continue
+                headers = ["id", "type", "category", "amount", "day", "memo", "tags"]
+                rows = []
+                for t in templates:
+                    tags_str = ",".join(t.tags) if t.tags else ""
+                    rows.append([t.id, t.type, t.category, f"{t.amount:,}원", f"매월 {t.day}일", t.memo, tags_str])
+                print_aligned_rows(headers, rows)
+                
+            elif choice == "2":
+                print("[신규 반복 템플릿 등록]")
+                type_str = self.prompt_validated_input("- 타입", validate_type, "expense", ["income", "expense"])
+                category = self.prompt_category_interactive("food")
+                amount = int(self.prompt_validated_input("- 금액", validate_amount, "10000", ["10000", "30000", "50000"]))
+                day = int(self.prompt_validated_input("- 매월 반복 일자 (1-31)", validate_day, "25", ["25", "20", "10"]))
+                memo = self.prompt_validated_input("- 메모 (선택)", lambda x: (True, "", ""), "월세", ["월세", "보험금", "기본급"])
+                tags_input = self.prompt_validated_input("- 태그 (선택)", lambda x: (True, "", ""), "고정비", ["고정비", "월세", "급여"])
+                tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
+                
+                new_id = self.service.add_recurring_template(type_str, category, amount, day, memo, tags)
+                print(f"[저장 완료] template_id={new_id}")
+                headers = ["id", "type", "category", "amount", "day", "memo", "tags"]
+                rows = [[new_id, type_str, category, f"{amount:,}원", f"매월 {day}일", memo, ",".join(tags)]]
+                print_aligned_rows(headers, rows)
+                
+            elif choice == "3":
+                existing_rec_ids = self.get_all_recurring_ids()
+                t_id = self.prompt_validated_input("- 삭제할 템플릿 ID (REC-XXXXXX)", lambda x: (True, "", "") if x in existing_rec_ids else (False, "존재하지 않는 템플릿 ID입니다.", ""), None, existing_rec_ids)
+                if not t_id:
+                    continue
+                success = self.service.remove_recurring_template(t_id)
+                if success:
+                    print(f"[삭제 성공] template_id={t_id}")
+                else:
+                    print(f"[삭제 실패] template_id={t_id} 삭제 오류")
+                    
+            elif choice == "4":
+                this_month = datetime.date.today().strftime("%Y-%m")
+                month = self.prompt_validated_input("- 자동 생성할 대상 월 (YYYY-MM)", validate_month, this_month, [this_month])
+                print("[처리 진행 중...]")
+                count = self.service.generate_recurring_transactions(month)
+                print(f"[처리 완료] {month} 월에 총 {count}건의 반복 거래 내역을 가계부에 자동 추가했습니다.")

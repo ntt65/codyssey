@@ -1,0 +1,12 @@
+date,type,category,amount,memo,tags
+2026-06-01,income,food,15000,빵,외식
+2026-06-01,income,education,10000,점심,교통
+2026-06-01,income,food,10000,점심,식대
+2026-06-01,income,food,10000,마트,식대
+2026-06-01,income,food,10000,,
+2026-06-01,expense,food,50000,,생필품
+2026-06-01,expense,food,10000,,
+2026-06-01,expense,food,10000,,
+2026-06-01,expense,food,10000,점심,식대
+2026-06-28,expense,food,10000,점심,식대
+2026-06-28,income,other,50000,저녁,고정비

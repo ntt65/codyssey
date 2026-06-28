@@ -338,9 +338,7 @@ class BudgetService:
         Returns:
             int: CSV 파일로 정상 저장 추출에 성공한 거래 건수
         """
-        if not month and not (from_date and to_date):                          # 필수 조건 중 둘 다 유실된 상태 검증
-            raise ValueError("수출(export)하려면 --month 또는 --from/--to 날짜 범위 중 하나 이상을 지정해야 합니다.")
-
+        # 필터 조건이 없으면 전체 거래 내역을 내보냅니다.
         if month:
             self.validate_month_format(month)                                 # 형식 유효성 점검
         if from_date:
