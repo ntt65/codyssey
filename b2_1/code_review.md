@@ -11,6 +11,19 @@
 ### 계층 분할 및 책임 경계 (Layered Architecture)
 본 프로젝트는 관심사 분리(SoC)를 실현하기 위해 역할을 네 가지 계층으로 분할하고, 각 계층의 종속성이 하위 방향(UI -> Service -> Repository -> Models)으로만 흐르도록 구조화하여 유지보수성을 극대화했습니다.
 
+### ⚙️ 커맨드 파싱 및 실행의 책임 분할 (Parsing vs. Execution Responsibilities)
+프로그램을 구동하고 명령어를 해석·실행할 때, 본 프로젝트는 계층 분리 원칙에 맞춰 **파싱(Parsing)**, **실행 제어(Controller)**, **비즈니스 연산(Business Logic)**의 책임을 명확히 구분했습니다:
+
+1. **커맨드라인 옵션 파싱의 책임 ([__main__.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py))**:
+   * 사용자가 터미널에서 입력한 최초 명령어와 옵션 플래그(예: `--category food`)는 진입점인 `__main__.py` 내의 `argparse` 파서가 전담하여 파싱(해석)합니다.
+2. **대화형 셸 명령어 파싱의 책임 ([cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py))**:
+   * 사용자가 명령어 없이 프롬프트로 기입한 뒤 입력하는 개별 커맨드 줄은 `cli.py` 내의 `InteractiveShell` 루프가 문자열 스플릿(`parts = input_line.split()`)을 통해 자체 파싱합니다.
+3. **실행 제어 및 흐름 지휘의 책임 ([cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py))**:
+   * 파싱된 명령어에 맞춰 알맞은 핸들러 함수를 기동하고, 필수 정보 누락 시 추가 질문 대화를 진행하거나 최종 결과를 터미널 화면에 테이블 구조로 출력하는 **컨트롤러(Controller) 역할**은 프레젠테이션 계층인 `cli.py`가 총지휘합니다.
+4. **비즈니스 연산 및 유효성 검사 실행의 책임 ([service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py))**:
+   * **`service.py`는 터미널 옵션 플래그나 탭 키 오타 방지 등의 환경을 완전히 은닉(모름)합니다.**
+   * 오직 `cli.py`로부터 정돈된 순수 파이썬 데이터 인자(예: `category="food"`)를 매개변수로 넘겨받았을 때만 비즈니스 유효성 검사([`validate_fields`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L616))를 실행하고 핵심 필터링/요약 계산 로직을 작동시킵니다.
+
 ### 📂 상세 클래스별 책임 및 디자인 패턴 분석 (Detailed Class Roles)
 
 #### 1. [models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py) (데이터 모델 및 DTO 계층)
