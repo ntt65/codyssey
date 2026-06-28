@@ -766,3 +766,33 @@ def import_from_csv(self, filepath: str) -> Tuple[int, int]:
     # (성공 건수, 스킵 건수) 튜플 형태 리턴 타입 명시
     ...
 ```
+
+### **⑧ 이중 실행 모드 (Dual-Mode) 라우팅 및 처리 흐름**
+* **용도**: 단발성 CLI 명령어 인터페이스 요구사항과 사용자의 입력 편의를 극대화하는 대화형 셸(Interactive Shell) 모드를 하나의 코드베이스에서 조화롭게 라우팅하고 처리합니다.
+* **소스 코드**:
+  - **진입점 분기 ([__main__.py:L120-L123](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L120-L123))**:
+    ```python
+    if args.command:
+        shell.execute_command(args.command, args) # CLI 모드 실행
+    else:
+        shell.run()                               # 대화형 셸 모드 실행
+    ```
+  - **CLI 실행 처리 ([cli.py:L745-L751](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L745-L751))**:
+    ```python
+    def execute_command(self, command: str, args):
+        # 1. 터미널 인수(args)를 그대로 분기 처리하여 비즈니스 로직에 매핑
+        # 2. 필수 값 누락 시에도 대화식 질문(input)을 던지지 않고 기본값/None 처리
+        # 3. 출력 완료 즉시 프로세스 자동 종료 (루프 없음)
+        ...
+    ```
+  - **대화형 실행 처리 ([cli.py:L659-L666](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L659-L666))**:
+    ```python
+    def run(self):
+        while True:
+            # 1. 매 루프마다 macOS 입력 소스를 영문으로 강제 자동 변환해 오타 방지
+            # 2. readline 탭 자동완성을 연동한 프롬프트 대기 (input() 구동)
+            # 3. 입력 누락 항목에 대해 prompt_validated_input()을 띄워 대화식 수집
+            # 4. 기능 수행 완료 후에도 프로세스를 끝내지 않고 다음 명령 대기 프롬프트 복귀
+            ...
+    ```
+
