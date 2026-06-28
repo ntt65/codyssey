@@ -413,7 +413,7 @@ sequenceDiagram
 #### 📌 1. 프로그램 초기 구동 및 의존성 구성 흐름 (Bootstrap Flow)
 사용자가 터미널에서 `python3 -m budget_app` 명령을 실행해 어플리케이션이 메모리에 적재되고 조립되는 라이프사이클 단계입니다.
 
-1. **`__main__.py` ➡️ `(Entry point)` ➡️ `main()`**:
+1. **[__main__.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py) ➡️ (Entry point) ➡️ [main()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L22-L124)**:
    * **Step 1 (인자 파싱)**: `argparse.ArgumentParser` 인스턴스를 통해 커맨드 아규먼트를 파싱할 준비를 합니다. `--data-dir` 플래그를 추가하여 기본 데이터 저장 경로(기본값 `./data`)를 취득하고, 서브 명령어(`command`) 및 인자(`args`) 정보를 담은 `parser.parse_args()` 결과를 `args` 네임스페이스 변수에 바인딩합니다.
    * **Step 2 (저장소 생성)**: `try-except` 예외 격리 범위 내에서 `repo = FileRepository(data_dir=args.data_dir)`를 호출하여 영속성 디스크 제어 인스턴스를 초기화합니다.
    * **Step 3 (서비스 조립)**: 저장소 객체 `repo`를 주입받아 비즈니스 엔진인 `service = BudgetService(repository=repo)` 객체를 DI 형태로 생성합니다.
@@ -421,13 +421,13 @@ sequenceDiagram
    * **Step 5 (구동 에러 차단)**: 이 초기 생성 단계에서 하드디스크 쓰기 권한 누락이나 OS 에러 등의 `Exception`이 돌출되면 `except` 블록으로 떨어져 `sys.stderr`로 `[오류] 초기 구동 실패` 진단 로그와 함께 해결 힌트 출력 후 `sys.exit(1)`을 통해 안전하게 앱을 강제 중단시킵니다.
    * **Step 6 (실행 모드 라우팅)**: 명령줄 인자 중 `args.command` 값이 있으면 단발성 CLI 모드 즉시 실행을 위해 `shell.execute_command(command=args.command, args=args)`를 수행하고 바로 프로세스를 반환합니다. 지정 명령어가 없으면 대화형 상호작용을 시작하기 위해 `shell.run()` 루프 함수를 호출합니다.
 
-2. **`repository.py` ➡️ `FileRepository` ➡️ `__init__(self, data_dir: str)`**:
+2. **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) ➡️ [FileRepository](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27) ➡️ [__init__()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27-L51)**:
    * **Step 1 (경로 바인딩)**: 매개변수로 수신된 디렉터리 경로 문자열을 `self.data_dir` 멤버 변수에 기재합니다.
    * **Step 2 (4대 물리 파일 경로 조립)**: `os.path.join`을 구동하여 `self.transactions_path`(`transactions.jsonl`), `self.categories_path`(`categories.jsonl`), `self.budgets_path`(`budgets.jsonl`), `self.recurring_path`(`recurring.jsonl`)의 최종 파일 결합 경로들을 멤버 변수들에 각각 캐싱해 둡니다.
    * **Step 3 (디렉터리 영구 보장)**: `self._ensure_dir()` 메서드를 내부 호출하여 `os.makedirs(self.data_dir, exist_ok=True)` 구문을 기동합니다. 이를 통해 가계부 데이터 저장 디렉터리가 물리적으로 디스크 상에 존재함을 영구 보장합니다.
    * **Step 4 (카테고리 초기값 주입)**: `self.load_categories()`를 기동해 파일 크기나 존재 여부를 확인합니다. 해당 텍스트 파일이 비어있는 상태인 경우, 기본 빌트인 리스트 `["food", "transport", "rent", "shopping", "health", "education", "salary", "allowance", "other"]` 배열 데이터를 준비하고 `self.save_categories()`를 역호출하여 최초 물리 인스턴스 파일 구조에 9종 카테고리를 영구 저장합니다.
 
-3. **`cli.py` ➡️ `InteractiveShell` ➡️ `__init__(self, service: BudgetService)`**:
+3. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [__init__()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L481-L502)**:
    * **Step 1 (의존성 서비스 연동)**: 아규먼트로 전달받은 `service`를 `self.service` 멤버 변수에 지정하여 비즈니스 연산 의존 통로를 만듭니다.
    * **Step 2 (명령어 사전 셋업)**: 사용 가능한 15가지 명령어 텍스트(`help`, `add`, `list`, `search`, `exit` 등) 리스트를 `self.commands` 멤버 변수에 적재합니다.
    * **Step 3 (Readline 바인딩)**: 파이썬 표준 라이브러리 `readline` 모듈의 동적 임포트를 체크하고, 탭 자동완성을 제어하기 위한 `CommandCompleter(self.commands)` 클래스를 빌드한 후 `readline.set_completer(self.completer.complete)`를 기동하여 탭 키 이벤트 핸들러를 물리 셸 환경에 탑재합니다.
@@ -437,21 +437,21 @@ sequenceDiagram
 #### 📌 2. 대화형 셸 실행 및 명령어 파싱 루프 흐름 (Interactive Shell Loop Flow)
 명령줄 인자(옵션) 없이 대화형 프롬프트로 진입하여 루프를 돌며 제어권을 유지하는 핵심 런타임 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `run(self)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [run()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L659-L704)**:
    * **Step 1 (안내판 드로잉)**: 터미널 표준 출력으로 가계부 웰컴 배너와 `help`, `exit` 안내 텍스트를 출력합니다.
    * **Step 2 (히스토리 적재)**: 기존 `readline`에 내장 보관 중이던 이전 셸 세션 히스토리를 획득해 `self.history` 메모리 배열에 적치해 자동완성 준비를 보강합니다.
    * **Step 3 (무한 셸 대기 루프)**: `while True` 조건 루프 구동을 개시합니다.
    * **Step 4 (오타 방지 강제 전환)**: 루프 헤드에서 `switch_to_english()`를 다이렉트 수행합니다. macOS C API 카본 TIS API 포인터를 획득하여 터미널 포커스의 언어 입력을 'US English'로 강제 물리 자동 전환시킴으로써 사용자가 한글 자판 상태에서 한타 오타를 치는 상황을 원천 보호합니다.
    * **Step 5 (키 입력 대기)**: `self.prompt_main_command("budget_app> ")` 함수를 기동하여 사용자로부터 입력 한 줄을 가져옵니다.
 
-2. **`cli.py` ➡️ `InteractiveShell` ➡️ `prompt_main_command(self, prompt: str)`**:
+2. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [prompt_main_command()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L504-L527)**:
    * **Step 1 (입력 획득)**: 파이썬 `input(prompt)`을 수행해 키 입력을 블로킹 감시합니다. 만약 입력 중 `Ctrl+C` 인터럽트가 들어오면 `KeyboardInterrupt`를 상위로 전송해 대기 상태로 루프를 복구하고, `Ctrl+D`를 누르면 `EOFError`를 던져 안전 마감 흐름으로 인계합니다.
    * **Step 2 (공백 정규화)**: 문자열의 앞뒤 화이트 스페이스 공백을 `.strip()`으로 제거하여 원본 명령줄 줄기를 얻습니다.
 
-3. **`cli.py` ➡️ `InteractiveShell` ➡️ `run(self)` (계속)**:
+3. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [run()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L659-L704) (계속)**:
    * **Step 1 (정상 종료 식별)**: 정규화된 입력값을 스페이스 기준으로 슬라이싱 분할하여 첫 단어(`parts[0]`)를 소문자로 정규화한 `command` 변수로 확보합니다. `command`가 `exit` 또는 `quit` 목록에 있으면 웰컴 작별 문구 출력 후 `break`를 실행해 무한 루프를 파기하고 메인 프로그램 종료 절차(`sys.exit(0)`)로 탈출합니다.
 
-4. **`cli.py` ➡️ `InteractiveShell` ➡️ `parse_and_execute(self, command: str, args: List[str])`**:
+4. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [parse_and_execute()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L706-L743)**:
    * **Step 1 (데코레이션 필터 장벽 진입)**: `@catch_errors` 공통 측면 데코레이터 기능 내부 래퍼 함수(`wrapper`) 영역에 진입합니다.
    * **Step 2 (명령 라우팅 분기)**: `command` 변수의 매칭 문자열 판별 조건문 분기를 실행합니다.
      * `add` ➡️ `self.handle_add()` 호출
@@ -465,7 +465,7 @@ sequenceDiagram
 #### 📌 3. 단발성 CLI 서브명령어 실행 및 즉시 종료 흐름 (CLI Subcommand Execution Flow)
 명령줄에 옵션값(예: `python3 -m budget_app search --category food`)을 직접 작성해 일회성 실행 지시를 내렸을 때의 즉각적 마감 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `execute_command(self, command: str, args)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [execute_command()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L745-L921)**:
    * **Step 1 (명령 인자 라우팅)**: 전달받은 파서 `args`를 토대로 적절한 서브핸들러 함수를 기동합니다.
    * **Step 2 (CLI 특화 옵션 처리)**: 대화형 셸과 다르게 CLI 모드 실행 시에는 누락 아규먼트 플래그에 대해 키보드 입력을 강구하지 않아야 하므로, 셸 모드 식별 플래그를 이용해 fallback `input()` 프롬프트를 활성화하지 않고 `None` 또는 공백 디폴트 아규먼트를 콤포넌트에 직전 수동 전달하여 연산을 가속합니다.
    * **Step 3 (종료 마무리)**: 명령에 할당된 화면 출력이 모두 인쇄 마감되면 대화형 루프를 통과하지 않으므로, 호출 스택을 거쳐 `__main__.py` 최하단 끝줄에 도달하고 예외 없이 프로세스 종료 코드 `0`을 OS에 반환하며 정상 즉시 마감됩니다.
@@ -475,14 +475,14 @@ sequenceDiagram
 #### 📌 4. 거래 추가 흐름 (Transaction Add Flow)
 가계부에 신규 거래 원장을 하나 작성해 기입할 때 이행되는 데이터 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_add(self)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_add()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1034-L1055)**:
    * **Step 1 (날짜 대화식 수집)**: `self.prompt_validated_input("- 날짜 (YYYY-MM-DD): ", default=현재오늘날짜)`를 호출합니다. 사용자가 엔터 입력 시 오늘 날짜로 보정해 주며 `[정보]` 알림을 띄웁니다.
    * **Step 2 (타입 대화식 수집)**: `self.prompt_validated_input("- 타입 (income /expense ): ", options=["income", "expense"], default="expense")`를 수행해 유효 입력을 제한합니다.
    * **Step 3 (카테고리 수집 및 동적 복구)**: `self.prompt_category_interactive()`를 호출하여 등록된 목록 중에서 입력받습니다. 만약 기등록되어 있지 않은 신규 카테고리가 입력되면 즉시 "기존 목록에 없는 카테고리입니다. 새로 등록할까요? (y/n)" 다이얼로그를 제공하여, 수락 시 `service.add_category()`를 기동해 동적으로 카테고리 마스터 테이블에 저장하고 흐름을 복원합니다.
    * **Step 4 (나머지 수치 수집)**: 금액(양의 정수), 메모(공백 가능), 태그들(쉼표 구분)을 차례로 획득합니다.
    * **Step 5 (서비스 위임 호출)**: 취득된 정형 값들을 매개변수로 실어 `self.service.add_transaction(...)` 메서드를 기동합니다.
 
-2. **`service.py` ➡️ `BudgetService` ➡️ `add_transaction(self, date, type_str, category, amount, memo, tags)`**:
+2. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [add_transaction()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L41-L68)**:
    * **Step 1 (통합 유효성 검사)**: `self.validate_fields(date, type_str, category, amount)`를 기동합니다.
      * 날짜 포맷이 `YYYY-MM-DD` 양식을 따르는지 `datetime.strptime` 검증을 거칩니다.
      * `type_str` 값이 `"income"` 혹은 `"expense"`인지 판별합니다.
@@ -493,11 +493,11 @@ sequenceDiagram
    * **Step 3 (도메인 데이터 구축)**: `models.py`에 명시된 `Transaction` 데이터 클래스의 생성자 파라미터 규격을 맞춰 `tx` 데이터 인스턴스를 조립 구축합니다.
    * **Step 4 (저장 요청)**: 완공된 `tx` 객체를 실어 저장소 물리 저장 지시인 `self.repository.append_transaction(tx)`를 호출하고, 채번해 보관하고 있던 `tx_id` 값을 cli 계층으로 반환합니다.
 
-3. **`repository.py` ➡️ `FileRepository` ➡️ `append_transaction(self, tx: Transaction)`**:
+3. **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) ➡️ [FileRepository](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27) ➡️ [append_transaction()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L74-L83)**:
    * **Step 1 (추가 쓰기 파일 오픈)**: `transactions.jsonl` 파일 경로 지점을 대상 삼아 추가 모드(`"a"`) 및 UTF-8 인코딩 인자를 지정해 물리 `open()`을 구동합니다.
    * **Step 2 (직렬화 및 물리 쓰기)**: `tx.to_dict()` 메서드를 통해 원장 객체를 순수 파이썬 기본 딕셔너리로 전사한 뒤, `json.dumps(dict_data, ensure_ascii=False)` 구문을 거쳐 한 줄의 JSON 규격 문자열로 직렬화하여 파일 시스템 버퍼 끝단에 밀어 적고 파일 락 핸들을 클로즈 마감합니다.
 
-4. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_add(self)` (계속)**:
+4. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_add()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1034-L1055) (계속)**:
    * **Step 1 (입력 완료 전체 피드백)**: 저장 완료 후 생성된 ID만 파편 노출하는 대신, 사용자가 기입 및 확인 가능하도록 해당 신규 거래 정보 전체의 폭 길이를 계산하고 보정하여 `print_aligned_rows` 테이블 레이아웃 포맷에 얹어 출력 완료 피드백을 전달합니다.
 
 ---
@@ -505,17 +505,17 @@ sequenceDiagram
 #### 📌 5. 거래 수정 및 삭제 흐름 (Transaction Update/Delete Flow)
 사용자가 기존 거래 정보를 가공 정정하거나 혹은 완벽하게 지울 때의 원자적 파일 교체(OS Atomic-swap) 물리 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_update(self, args)` / `handle_delete(self, args)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_update()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1212-L1255) / [handle_delete()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1257-L1288)**:
    * **Step 1 (대상 ID 획득)**: 명령줄 인자로 기입된 ID 혹은 프롬프트 대기 입력을 통해 수정/삭제를 타겟팅할 `tx_id` 문자열 값을 추출합니다.
    * **Step 2 (수정 대화식 프롬프트 기동)**: 수정 시에는 기존에 적혀있는 값을 사전에 로딩하여 프롬프트의 기본 제안값으로 노출해 줍니다. 사용자가 임의 필드를 타이핑하면 새로운 값으로 대체되고, 아무것도 안 적고 엔터키를 치면 기존 데이터 속성이 그대로 보존 유지되는 동적 `input()` fallback 매커니즘을 구동합니다.
    * **Step 3 (삭제 최종 컨펌)**: 삭제 시에는 무작위 유실을 예방하기 위해 정말 삭제를 수행할 것인지 묻는 최종 검증 질의 프롬프트(y/n)를 기동합니다.
    * **Step 4 (서비스 레이어 통제 위임)**: 최종 수집 완료된 아규먼트 정보들을 묶어 `self.service.update_transaction(...)` 혹은 `self.service.delete_transaction(...)` 메서드를 각각 가동합니다.
 
-2. **`service.py` ➡️ `BudgetService` ➡️ `update_transaction(...)` / `delete_transaction(...)`**:
+2. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [update_transaction()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L152-L179) / [delete_transaction()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L180-L191)**:
    * **Step 1 (데이터 정책성 검사)**: 변경 타겟 데이터의 비즈니스 룰 위반 여부 점검을 위해 `self.validate_fields()` 유효성 필터를 태웁니다.
    * **Step 2 (영속 계층 반영 요청)**: 업데이트의 경우 변경 사항이 조립된 신규 `updated_tx` 인스턴스 객체를 전달하고, 삭제의 경우 삭제 표식을 위해 `updated_tx` 매개 파라미터 값에 `None`을 명시하여 저장소 계층의 갱신 연산인 `self.repository.update_or_delete_transaction(tx_id, updated_tx)`를 호출합니다.
 
-3. **`repository.py` ➡️ `FileRepository` ➡️ `update_or_delete_transaction(self, tx_id: str, updated_tx: Optional[Transaction]) -> bool`**:
+3. **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) ➡️ [FileRepository](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27) ➡️ [update_or_delete_transaction()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L84-L127)**:
    * **Step 1 (임시 작업공간 개설 - 원자적 결함 방어)**: 쓰기 작업 이행 도중 전원이 차단되거나 시스템 크래시가 났을 때 원본 파일이 깨지거나 중간 단절 상태의 쓰레기 데이터만 남아 영구 오염되는 시나리오를 막기 위해, 데이터 저장 디렉터리(`self.data_dir`)의 하위 임시 공간에 유니크 식별자 파일명을 기반으로 `tempfile.mkstemp` 물리 빈 임시 리소스를 선 생성하고 임시 파일 디스크립터(`temp_fd`)와 경로(`temp_path`)를 안전 변수로 획득해 둡니다.
    * **Step 2 (I/O 파일 포인터 연동)**: 생성된 임시 파일 핸들을 읽기 전용 쓰기 모드로 감싸는 `os.fdopen(temp_fd, "w", encoding="utf-8")`을 오픈합니다. 동시에 기존의 오리지널 원본인 `transactions.jsonl`이 존재하는 경우 이를 읽기 전용(`"r"`)으로 open 연동합니다.
    * **Step 3 (라인별 스트리밍 검사 복사)**: 기존 원본 파일을 개행 단위로 순회(`for line in in_f:`)를 돌며 각 텍스트 줄을 판독합니다.
@@ -530,21 +530,21 @@ sequenceDiagram
 #### 📌 6. 거래 조회 흐름 (Transaction List Flow)
 데이터 개수가 수십만 건 이상으로 늘어나더라도 물리 메모리가 고갈되거나 CPU 지연 병목이 없이 안전하게 최신순 정렬 거래 내역을 화면에 인쇄해 주는 스트리밍 조회 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_list(self, args)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_list()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1057-L1083)**:
    * **Step 1 (리미트 수치 확정)**: 보여주고자 희망하는 출력 제한 한도 개수(`--limit` 옵션값, 미지정 시 기본 10건)를 획득해 정수형으로 형변환하여 `self.service.list_transactions(limit=limit)`를 기동합니다.
 
-2. **`service.py` ➡️ `BudgetService` ➡️ `list_transactions(self, limit: int) -> List[Transaction]`**:
+2. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [list_transactions()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L70-L96)**:
    * **Step 1 (메모리 버퍼 고정)**: 최신순으로 정렬 삽입하여 최종 N개만 담고 있을 수 있는 빈 `top_txs = []` 보관 버퍼 리스트를 준비합니다.
    * **Step 2 (저장소 스트리머 루프 작동)**: `self.repository.stream_transactions()` 제너레이터 함수를 호출하여 데이터를 줄줄이 공급받는 `for tx in ...` 순회 엔진을 가동합니다.
 
-3. **`repository.py` ➡️ `FileRepository` ➡️ `stream_transactions(self) -> Generator[Transaction, None, None]`**:
+3. **[repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) ➡️ [FileRepository](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27) ➡️ [stream_transactions()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L72)**:
    * **Step 1 (파일 생사 확인)**: `transactions.jsonl` 파일 존재 유무를 확인합니다. 파일 자체가 아직 없으면 빈 제너레이터 전달을 위해 `return`으로 실행을 종료합니다.
    * **Step 2 (스트리밍 오픈)**: 물리 데이터 파일을 읽기 모드(`"r"`) 및 UTF-8 인코딩 인자를 장착해 open합니다.
    * **Step 3 (메모리 고정 한 줄 로드)**: 개행 구분자를 기준으로 한 줄씩 읽는 `for line in f:` 구문을 실행합니다. 이 처리는 파일 텍스트 전체를 한꺼번에 리스트에 담는 `readlines()`와 완전히 대조적으로, 한 순간에 단 한 행(Line)의 문자열만 하드디스크 버퍼에서 읽어 올려 O(1) 수준의 공간 복잡도 한계를 강력 억제합니다.
    * **Step 4 (도메인 복원 및 방출)**: 양쪽 빈 공백 문자를 트림한 뒤 `json.loads(line)`를 구동해 JSON 문자열을 파이썬 딕셔너리로 전사하고 `Transaction.from_dict(data)`를 수행해 객체로 복원합니다. 이 조립된 객체 인스턴스를 `yield` 구문 지시어를 통해 실시간으로 호출자(서비스 레이어)에게 방출해 줍니다. 
    * **Step 5 (오염 행 무시)**: 데이터 구조가 깨졌거나 직렬화 형식이 망가진 오류 라인을 감지하면 스크래시를 유발하는 대신 `continue`로 건너뛰어 회복 탄력성을 지킵니다.
 
-4. **`service.py` ➡️ `BudgetService` ➡️ `list_transactions(self, limit: int)` (계속)**:
+4. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [list_transactions()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L70-L96) (계속)**:
    * **Step 1 (O(limit) 정렬 위치 탐색)**: `stream_transactions`로부터 전달받은 신규 `tx` 객체에 대해 현재 `top_txs` 버퍼 속의 기존 데이터들과 대소 비교 연산을 진행합니다.
      * 날짜값 내림차순(최신순: `tx.date > existing.date`), 그리고 날짜가 우연히 동일하다면 고유 식별자 키 역순(`tx.id > existing.id`)의 명확한 정렬 기조를 적용해 들어갈 알맞은 배열 인덱스 `i` 위치를 탐색합니다.
      * 타겟 정렬 위치가 발견되면 `top_txs.insert(i, tx)`를 구동해 버퍼의 정교한 중간 지점에 밀어 넣습니다.
@@ -553,7 +553,7 @@ sequenceDiagram
      * 이 장치는 파일에 100만 줄의 가계부 내역이 쌓여 있더라도 실제 RAM 메모리상에는 딱 `limit` 개수(예: 10개)만큼만 데이터가 존재하도록 강력 억제하여 병목이나 서버 다운을 완벽하게 방지하는 코어 알고리즘입니다.
    * **Step 3 (서비스 전달)**: 파일 스캔이 완료되면 최종 보존된 `limit` 개 분량의 최신 정렬 거래 리스트 `top_txs`를 반환합니다.
 
-5. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_list(self, args)` (계속)**:
+5. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_list()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1057-L1083) (계속)**:
    * **Step 1 (CJK 너비 계산 표 렌더링)**: 서비스로부터 전달받은 리스트를 출력하기 위해 `self.print_aligned_rows` 모듈을 구동합니다.
      * `unicodedata.east_asian_width`를 사용하는 가폭 측정기인 `visual_len()` 함수를 태워 한글 문자 개수가 아닌, 터미널 화면상에서 한글이 점유할 실제 물리적 가로 폭 넓이(2칸)를 연산해 컬럼 헤더 칸에 정확한 너비 공백 패딩을 보정 삽입(`pad_string`)합니다.
      * 이를 통해 터미널 격자 줄이 삐뚤어지지 않고 정확하게 일치 정렬된 가계부 표 화면을 사용자에게 렌더링합니다.
@@ -563,17 +563,17 @@ sequenceDiagram
 #### 📌 7. 예산 설정 및 집계/경고 흐름 (Budget & Summary Flow)
 특정 월의 재정 총액을 집계하고 예산 소모율 및 초과 여부 경고 리포트를 출력할 때의 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_summary(self, args)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_summary()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1122-L1164)**:
    * **Step 1 (대상 월 식별)**: 통계를 파악할 타겟 년월(`YYYY-MM`) 정보를 인수 또는 대화식 입력을 통해 확정하고 `self.service.get_monthly_summary(month=month)`를 호출합니다.
 
-2. **`service.py` ➡️ `BudgetService` ➡️ `get_monthly_summary(self, month: str, top_n: int) -> dict`**:
+2. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [get_monthly_summary()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L279-L325)**:
    * **Step 1 (스트리밍 월 집계)**: `self.repository.stream_transactions()`를 순회 감시하며 개별 거래 내역의 날짜 문자열 앞부분이 타겟 년월 정보(`month + "-"`)로 시작하는지 체크합니다.
    * **Step 2 (수입/지출 합산 연산)**: 대상 월 조건에 맞는 거래들에 대해 `"income"` 분류이면 총 수입 합산에 더하고, `"expense"` 분류이면 총 지출 합산에 누적 가산합니다. 동시에 지출 카테고리별 누계 금액을 딕셔너리에 맵핑합니다.
    * **Step 3 (예산 한도액 조회)**: `self.repository.load_budgets()` 메서드를 호출하여 설정된 예산 정보 파일 딕셔너리를 메모리에 기동한 뒤 해당 월을 키값 삼아 책정된 한도액(Budget)을 추출합니다. (지정액이 없다면 예산은 0원으로 초기화됩니다).
    * **Step 4 (경고 상태 판정)**: 총 지출 누계액이 확보된 예산액을 상회하는지 조건 대조합니다. 사용 비율을 백분율 연산하고, 예산을 초과한 상황이면 `is_exceeded = True` 속성을 리포트 데이터에 담아 반환합니다.
    * **Step 5 (지출 TOP 순위 연산)**: 지출 카테고리 누계 딕셔너리를 대상으로 지출액이 큰 내림차순 정렬을 실시하고 매개변수로 지정된 `top_n` 개수만큼 슬라이싱해 통계 통 정보를 완성 반환합니다.
 
-3. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_summary(self, args)` (계속)**:
+3. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_summary()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1122-L1164) (계속)**:
    * **Step 1 (초과 경고 알림)**: 통계 정보를 출력하되, 반환된 통계 속 `is_exceeded`가 참(`True`)인 경우 화면에 튀는 기호와 함께 `⚠️ [경고] 지출이 설정한 예산을 초과했습니다!` 메시지를 띄워 과소비 경각심을 고취하는 UI 처리를 수행합니다.
 
 ---
@@ -581,11 +581,11 @@ sequenceDiagram
 #### 📌 8. 정기 거래 템플릿 등록 및 생성 흐름 (Recurring Templates Flow)
 매월 고정적으로 발생하는 반복 전표 명세를 관리하고 일괄 자동 생성 처리하는 흐름입니다.
 
-1. **`cli.py` ➡️ `InteractiveShell` ➡️ `handle_recurring(self)`**:
+1. **[cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) ➡️ [InteractiveShell](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476) ➡️ [handle_recurring()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L1350-L1369)**:
    * **Step 1 (서브메뉴 순회 루프)**: `while True` 내부 서브 루프를 통해 1.조회, 2.등록, 3.삭제, 4.생성 옵션을 대기합니다.
    * **Step 2 (생성 메뉴 분기)**: 4번 메뉴가 셀렉트되면 일괄 거래를 주입하고 싶은 대상 연월(`YYYY-MM`)값을 입력받아 안전 규격을 검사한 뒤 `self.service.generate_recurring_transactions(month)`를 수행합니다.
 
-2. **`service.py` ➡️ `BudgetService` ➡️ `generate_recurring_transactions(self, month: str) -> int`**:
+2. **[service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) ➡️ [BudgetService](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25) ➡️ [generate_recurring_transactions()](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L546-L614)**:
    * **Step 1 (템플릿 메모리 주입)**: `self.repository.load_recurring_templates()`를 동작시켜 정기 반복 템플릿 리스트 객체들을 디바이스로부터 판독해 올립니다.
    * **Step 2 (기존 거래 내역 사전 수집)**: 해당 대상 월에 중복 전표가 발생하는 것을 사전에 감지하고 완전 억제하기 위해, `self.repository.stream_transactions()` 제너레이터를 한 바퀴 순회 구동하여 해당 월에 속하는 모든 거래 내역 정보 리스트를 `existing_txs` 임시 배열에 캐싱 수집해 둡니다.
    * **Step 3 (날짜 포맷 정합 빌드)**: 타겟 연월 `month`와 캘린더 모듈(`calendar.monthrange`)을 이용해 당월의 마지막 일자를 획득한 후 템플릿의 일자(`day`) 속성과 조합하여 실제 기입될 고정 거래 날짜 정보 문자열(`"YYYY-MM-DD"`)을 구축합니다.
