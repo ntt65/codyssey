@@ -14,6 +14,7 @@
   - 안전성 (원자적 쓰기): 특히 파일 수정(Update) 및 삭제(Delete) 시 데이터 유실을 완벽히 방어하기 위해, 임시 파일(tempfile)에 먼저 기록한 후 OS 커널의 os.replace 연산으로 원본을 덮어씌우는 원자적 파일 교체(Atomic Swap) 기법을 적용해 완벽한 파일 CRUD를 구현했습니다. 관련 안전 처리는 [repository.py:L84-L127](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L84-L127)에서 직접 확인할 수 있습니다.
 
 * 콘솔 프로그램을 클래스/모듈로 구조화하고, 각 계층(모델/저장소/서비스/CLI)의 책임을 설명할 수 있다.
+  - [code review](file:///Users/mpeg46551/codyssey/b2_1/budget_app/readme.md)
   - 달성 내용: 철저한 **계층형 아키텍처(Layered Architecture)**와 **의존성 주입(DI)**을 도입하여 책임을 4개의 핵심 모듈로 완전히 분리했습니다.
   - [models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py): 데이터 구조 규격화 및 딕셔너리 직렬화/역직렬화(DTO) 전담.
   - [repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py): 물리적 파일 입출력, 임시 파일 교체 등 하드디스크 제어를 전담하는 데이터 영속성 계층.
@@ -21,6 +22,7 @@
   - [cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) & [__main__.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py): 프롬프트 렌더링, 입력 보정(영어 자동 전환), 한글 크기 보정 정렬 테이블 출력 등 프레젠테이션(UI) 영역 통제.
 
 * `yield` 기반 제너레이터로 대용량 파일도 스트리밍 처리하는 이유와 동작 방식을 설명할 수 있다.
+  - [generator](file:///Users/mpeg46551/codyssey/b2_1/code_study.md)
   - 달성 내용: 수십만 건의 거래 데이터가 쌓여도 시스템 메모리가 고갈되지 않도록, 파일을 한 번에 배열로 읽어 들이지 않고 yield를 사용해 한 줄씩 실시간으로 파싱하는 스트리밍 구조를 채택했습니다.
   - 동작 방식 (O(limit) 정렬 버퍼): 목록 조회(list)나 검색(search) 시, 스트리밍으로 들어오는 데이터를 모두 리스트에 담지 않고, 사용자가 지정한 크기(limit)만큼의 고정된 정렬 버퍼만을 활용해 실시간으로 최신 N개만 추려냄으로써 메모리 복잡도를 O(limit) 수준으로 극대화하여 병목을 우회했습니다.
   - 상세 코드: [repository.py:L53-L72](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L72)

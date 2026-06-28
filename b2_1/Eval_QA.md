@@ -72,15 +72,14 @@ def __init__(self, data_dir: str):
   * **에러 경계 (스택트레이스 유출 방지)**: 공통 데코레이터 `@catch_errors`가 입력 포맷 위반(`ValueError`), 경로 부재(`FileNotFoundError`), 운영체제 권한 차단(`PermissionError`) 등 모든 예외 상황에 대한 에러 세부 사항을 stderr에 명시하고 힌트를 출력하여 스택 트레이스 노출을 차단하며 셸 프롬프트 제어를 유지합니다.
     * [decorators.py:L20-L47](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L20-L47)
   * **종료 코드 (Exit Code) 처리**: 애플리케이션 시작 지점에서 초기 데이터 디렉터리 바인딩 등 치명적인 구동 차단 오류가 나면 1을 반환하며 비정상 종료하고, CLI 루프에서 정상 종료 명령어(`exit`, `quit` 혹은 `Ctrl+D`)를 받았을 때는 예외 루프를 탈출해 코드로 0을 전달하고 정상적으로 마칩니다.
-    * [__main__.py:L39-L48](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L39-L48) | [cli.py:L675-L701](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L675-L701)
+    * [__main__.py:L111-L118](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py#L111-L118) | [cli.py:L690-L694](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L690-L694)
 
 ```python
-# [__main__.py:L39-L48] - 초기 구동 실패 시의 exit code 1 처리
+# [__main__.py:L111-L118] - 초기 구동 실패 시의 exit code 1 처리
 try:
-    repo = FileRepository(args.data_dir)                                  # 영속성 저장소 계층 인스턴스화
-    service = BudgetService(repo)                                         # 서비스 조합 및 의존성 주입
-    shell = InteractiveShell(service)                                     # CLI 콘솔 셸 빌드
-    shell.run()                                                           # 대화형 프롬프트 루프 작동
+    repo = FileRepository(data_dir=args.data_dir)                         # 영속성 저장소 계층 인스턴스화
+    service = BudgetService(repository=repo)                              # 서비스 조합 및 의존성 주입
+    shell = InteractiveShell(service=service)                             # CLI 콘솔 셸 빌드
 except Exception as e:
     print(f"[오류] 초기 구동 실패: {e}", file=sys.stderr)                   # stderr로 유효 에러 통지
     print("[힌트] 데이터 저장 경로의 읽기/쓰기 권한을 확인해 주세요.", file=sys.stderr)
@@ -209,7 +208,7 @@ def catch_errors(func: Callable[..., Any]) -> Callable[..., Any]:
   * 함수 선언 시 변수형 및 리턴 데이터 유형을 명확히 명시함으로써, 개발 중 IDE 정적 린터(Linter) 분석 도구를 통해 비호환 타입 할당 시 빌드/배포 전 미리 오류를 잡아낼 수 있으며, 클래스 간 파라미터 전달 규약을 명문화합니다.
     * `Transaction DTO 타입 지정`: [models.py:L30-L66](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py#L30-L66)
     * `제너레이터 반환 타입 지정`: [repository.py:L53-L60](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L60)
-    * `비즈니스 유효성 검증 함수 타입 지정`: [service.py:L618-L627](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L618-L627)
+    * `비즈니스 유효성 검증 함수 타입 지정`: [service.py:L616-L625](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L616-L625)
 
 ---
 

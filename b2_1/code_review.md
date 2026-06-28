@@ -440,7 +440,7 @@ def switch_to_english():
 
 ### **⑥ CJK 2바이트 가폭 인지 및 표 정렬**
 * **용도**: 동아시아 한글의 2바이트 출력 크기를 계산해 터미널 테이블 출력이 삐뚤어지지 않게 완벽 정렬합니다.
-* **소스 코드**: [cli.py:L295-L313](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L295-L313)
+* **소스 코드**: [cli.py:L298-L316](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L298-L316)
 ```python
 def visual_len(s: str) -> int:
     width = 0
@@ -455,7 +455,7 @@ def visual_len(s: str) -> int:
 
 ### **⑦ 타입 힌트 (Type Hinting)를 적용한 인터페이스 명세**
 * **용도**: 런타임 전 컴파일 단계(정적 린트)에서 타입 위반 버그를 예방하고, 개발자 간의 명확한 데이터 약속(Contract) 명세서이자 가독성 높은 자가 문서 역할을 담당합니다.
-* **소스 코드**: [models.py:L18-L30](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py#L18-L30) | [repository.py:L53-L60](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L60) | [service.py:L370-L380](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L370-L380)
+* **소스 코드**: [models.py:L17-L28](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py#L17-L28) | [repository.py:L53-L60](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L60) | [service.py:L368-L378](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L368-L378)
 ```python
 # 1. 데이터 구조 정의(models.py) 시 제네릭과 primitive 타입 명시
 @dataclass

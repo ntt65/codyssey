@@ -1,6 +1,6 @@
 # 가계부 애플리케이션(budget_app) 구현 결과 보고서
 
-본 보고서는 `/Users/mpeg46551/git/codyssey/b2_1/` 경로에 완성된 **파일 기반 가계부 콘솔 프로그램(budget_app)**의 구현 구조와 주요 기술적 해결 방안을 상세히 설명합니다.
+본 보고서는 `/Users/mpeg46551/codyssey/b2_1/` 경로에 완성된 **파일 기반 가계부 콘솔 프로그램(budget_app)**의 구현 구조와 주요 기술적 해결 방안을 상세히 설명합니다.
 
 ---
 ### 작업 요약                                                                                                                       
@@ -12,7 +12,7 @@
       • decorators.py: 예외 처리( @catch_errors ), 시간 측정, 활동 로깅                                                              
       • cli.py:  argparse  서브커맨드 처리, 한글 폰트 폭 보정 테이블 정렬기                                                   
   2. 제약사항 만족:                                                                                                                   
-      • 대용량 파일도 처리 가능한  yield  제너레이터 기반 파일 스트리밍. 조회                                                          
+      • 대용량 파일도 처리 가능한  yield  제너레이터 기반 파일 스트리밍 조회                                                          
       • 외부 라이브러리 설치 없이 파이썬 표준 라이브러리( json ,  csv ,  zipfile ,  tempfile ,  unittest )만 활용                     
       • 상세한 타입 힌트와 코드 모듈화 적용                                                                                           
   3. 보너스 기능 추가:                                                                                                                
@@ -21,13 +21,13 @@
       • 문자열 및 한글 정렬로 컬럼을 이쁘게 맞춰주는 테이블 포맷터 ( cli.py  내  print_aligned_rows )                                 
       • 임시 파일 수정 후 덮어쓰는 원자적 안전 저장 로직 ( os.replace )                                                               
   4. 검증:                                                                                                                            
-      • test_budget.py에 작성된 8개의 모든 핵심 기능 단위/통합 테스트 슈트 성공 통과                                                  
+      • test_budget.py에 작성된 12개의 모든 핵심 기능 단위/통합 테스트 슈트 성공 통과                                                  
       • 상세 설명과 스키마 명세를 정리한 README.md 생성                                                                          
                                                                                                                                       
   ──────                                                                                                                              
   ### 실행 예시                                                                                                                       
                                                                                                                                       
-   /Users/mpeg46551/git/codyssey/b2_1  폴더로 이동한 뒤 다음과 같이 프로그램을 실행해 볼 수 있습니다:                                 
+   /Users/mpeg46551/codyssey/b2_1  폴더로 이동한 뒤 다음과 같이 프로그램을 실행해 볼 수 있습니다:                                 
                                                                                                                                       
     # 1. 전체 도움말 확인                                                                                                             
     python3 -m budget_app --help                                                                                                      
@@ -40,23 +40,23 @@
   
     # 4. 테스트 슈트 실행
     PYTHONPATH=. python3 -m unittest tests/test_budget.py
-
-
+ 
+ 
 ## 1. 프로젝트 파일 목록 및 경로 링크
 
 전체 구현 파일들은 아래와 같이 기능적 책임에 따라 분리되었습니다. 
 
 | 파일명 | 기능 및 역할 |
 | :--- | :--- |
-| [models.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/models.py) | `Transaction`, `RecurringTemplate` 등의 데이터 규격 정의 및 직렬화/역직렬화 구현 |
-| [repository.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/repository.py) | JSONL 파일 CRUD, 제너레이터 스트리밍, ID 채번, 반복 거래 템플릿 로드/저장 및 원자적 쓰기(Atomic Write) 구현 |
-| [service.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/service.py) | 데이터 검증 및 CSV 가져오기 검증 공통화, 예산 대비 소모율 계산, 중복 검사, 백업 압축 등 비즈니스 로직 처리 |
-| [decorators.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/decorators.py) | CLI 경계 예외 처리(`@catch_errors`), 시간 측정(`@measure_time`), 작업 로깅(`@log_action`) 데코레이터 |
-| [cli.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/cli.py) | `argparse` 기반 명령어 파싱, 대화형 추가/수정 흐름 및 정렬 테이블 렌더링 |
-| [\_\_main\_\_.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/__main__.py) | CLI 실행 패키지 진입점 (`python3 -m budget_app`) |
-| [\_\_init\_\_.py](file:///Users/mpeg46551/git/codyssey/b2_1/budget_app/__init__.py) | 패키지 초기화 파일 |
-| [test_budget.py](file:///Users/mpeg46551/git/codyssey/b2_1/tests/test_budget.py) | 8개의 통합/단위 테스트 케이스를 포함한 테스트 슈트 |
-| [README.md](file:///Users/mpeg46551/git/codyssey/b2_1/README.md) | 상세 설치, 실행, 기능 설명, CSV 스키마 및 기술 요약이 담긴 안내서 |
+| [models.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/models.py) | `Transaction`, `RecurringTemplate` 등의 데이터 규격 정의 및 직렬화/역직렬화 구현 |
+| [repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) | JSONL 파일 CRUD, 제너레이터 스트리밍, ID 채번, 반복 거래 템플릿 로드/저장 및 원자적 쓰기(Atomic Write) 구현 |
+| [service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) | 데이터 검증 및 CSV 가져오기 검증 공통화, 예산 대비 소모율 계산, 중복 검사, 백업 압축 등 비즈니스 로직 처리 |
+| [decorators.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py) | CLI 경계 예외 처리(`@catch_errors`), 시간 측정(`@measure_time`), 작업 로깅(`@log_action`) 데코레이터 |
+| [cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) | `argparse` 기반 명령어 파싱, 대화형 추가/수정 흐름 및 정렬 테이블 렌더링 |
+| [\_\_main\_\_.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__main__.py) | CLI 실행 패키지 진입점 (`python3 -m budget_app`) |
+| [\_\_init\_\_.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/__init__.py) | 패키지 초기화 파일 |
+| [test_budget.py](file:///Users/mpeg46551/codyssey/b2_1/tests/test_budget.py) | 12개의 통합/단위 테스트 케이스를 포함한 테스트 슈트 |
+| [README.md](file:///Users/mpeg46551/codyssey/b2_1/README.md) | 상세 설치, 실행, 기능 설명, CSV 스키마 및 기술 요약이 담긴 안내서 |
 
 ---
 
@@ -90,14 +90,14 @@
 3. **가독성 개선 정렬 테이블 (`cli.py`)**: 외부 라이브러리 없이 한글(2칸 폭)과 영어/숫자(1칸 폭)의 넓이를 정확하게 구분해 주는 한글 폰트 보정 테이블 정렬 출력기 구현.
 4. **저장 원자성 강화**: `repository.py` 내의 모든 갱신 및 파일 재생성 메서드에 임시 파일 생성 + rename 전략을 일괄 적용.
 5. **아키텍처 리팩토링 (Refactoring V2)**:
-    - **입출력 로직의 저장소 위임**: 기존 `service.py`에 구현되어 저장 영역 세부 경로와 임시 파일 생성 로직에 직접 의존하던 반복 거래 데이터 입출력 함수(`load_recurring_templates`, `save_recurring_templates`)를 `repository.py`의 `FileRepository`로 격리 위임하여 단일 책임 원칙(SRP)을 강화했습니다.
-    - **CSV 임포트 정합성 검증 통합**: `import_from_csv` 메서드의 하드코딩 유효성 검사를 제거하고 기존 공통 헬퍼 메서드인 `validate_fields`로 통합하여 정합성 검증 규칙을 공통화했습니다.
+     - **입출력 로직의 저장소 위임**: 기존 `service.py`에 구현되어 저장 영역 세부 경로와 임시 파일 생성 로직에 직접 의존하던 반복 거래 데이터 입출력 함수(`load_recurring_templates`, `save_recurring_templates`)를 `repository.py`의 `FileRepository`로 격리 위임하여 단일 책임 원칙(SRP)을 강화했습니다.
+     - **CSV 임포트 정합성 검증 통합**: `import_from_csv` 메서드의 하드코딩 유효성 검사를 제거하고 기존 공통 헬퍼 메서드인 `validate_fields`로 통합하여 정합성 검증 규칙을 공통화했습니다.
 
 ---
 
 ## 3. 테스트 코드 결과 검증
 
-작성된 [test_budget.py](file:///Users/mpeg46551/git/codyssey/b2_1/tests/test_budget.py)를 실행하여 모든 핵심 동작과 예외 규칙이 완벽히 작동하는 것을 검증하였습니다.
+작성된 [test_budget.py](file:///Users/mpeg46551/codyssey/b2_1/tests/test_budget.py)를 실행하여 모든 핵심 동작과 예외 규칙이 완벽히 작동하는 것을 검증하였습니다.
 
 ```bash
 $ PYTHONPATH=. python3 -m unittest tests/test_budget.py
