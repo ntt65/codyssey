@@ -66,50 +66,50 @@
 
 #### 2. [repository.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py) (물리 데이터 영속성 계층)
 이 파일은 물리 디렉터리 보장, 파일 한 줄 단위 읽기/쓰기, 파일 교체 시의 원자적 변경 등 하드디스크 디바이스 직접 제어를 전담하며 데이터 정합성을 철저히 지키는 물리 I/O 계층입니다.
-* **`FileRepository` 클래스**:
+* **`FileRepository` 클래스 ([repository.py:L27](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L27))**:
   - **역할**: `data/` 디렉터리 내에 물리적으로 독립 구성된 4대 핵심 JSONL 파일 데이터베이스(`transactions.jsonl`, `categories.jsonl`, `budgets.jsonl`, `recurring.jsonl`)의 수명 주기를 제어하고 입출력을 대행합니다.
   - **주요 멤버 변수**: `data_dir`(저장 디렉터리 경로), `transactions_path`, `categories_path`, `budgets_path`, `recurring_path` 등 데이터 파일 경로들.
   - **핵심 메서드**:
-    - `stream_transactions(self) -> Generator[Transaction, None, None]`: 대용량 파일 읽기 시 메모리 고갈을 영구 차단하기 위해 `yield`를 사용하는 **제너레이터 스트리밍** 메서드입니다. 한 번에 한 줄씩만 JSON 객체를 파싱하여 최상위 계층에 전달합니다.
-    - `append_transaction(self, tx: Transaction)`: 전달된 새로운 거래 객체를 JSON 문자열 직렬화하여 가계부 데이터 파일 끝에 O(1) 수준으로 빠르게 덧붙여 씁니다.
-    - `update_or_delete_transaction(self, tx_id: str, updated_tx: Optional[Transaction]) -> bool`: 특정 ID의 거래 내역을 수정하거나 삭제할 때 데이터 파괴를 원천 방어하기 위해 임시 파일(`tempfile.mkstemp`)을 생성하여 작업 순차 기록 후, OS 커널 수준의 원자적 교체(`os.replace`) 연산으로 덮어씌워 완벽한 데이터 무결성(Atomicity)을 보장합니다.
-    - `load_categories()` / `save_categories()` / `load_budgets()` / `save_budgets()` / `load_recurring_templates()` / `save_recurring_templates()`: 각 설정 파일들에 대해 덮어쓰기 도중 크래시를 방지하기 위해 일괄 원자적 임시 쓰기 치환 전략을 활용하여 상태를 물리 디스크에 영구 기입합니다.
-    - `get_next_transaction_id()` / `get_next_recurring_id()`: 중복 없는 안전 식별자 채번을 보장하기 위해 기존 파일 데이터의 최댓값을 기준값 삼아 안전 증분 수치를 리턴합니다.
+    - [`stream_transactions()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L53-L72): 대용량 파일 읽기 시 메모리 고갈을 영구 차단하기 위해 `yield`를 사용하는 **제너레이터 스트리밍** 메서드입니다. 한 번에 한 줄씩만 JSON 객체를 파싱하여 최상위 계층에 전달합니다.
+    - [`append_transaction()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L74-L83): 전달된 새로운 거래 객체를 JSON 문자열 직렬화하여 가계부 데이터 파일 끝에 O(1) 수준으로 빠르게 덧붙여 씁니다.
+    - [`update_or_delete_transaction()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L84-L127): 특정 ID의 거래 내역을 수정하거나 삭제할 때 데이터 파괴를 원천 방어하기 위해 임시 파일(`tempfile.mkstemp`)을 생성하여 작업 순차 기록 후, OS 커널 수준의 원자적 교체(`os.replace`) 연산으로 덮어씌워 완벽한 데이터 무결성(Atomicity)을 보장합니다.
+    - 카테고리/예산/반복거래 저장 및 복원 메서드군 ([`load_categories`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L148-L164) / [`save_categories`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L166-L184) / [`load_budgets`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L186-L205) / [`save_budgets`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L207-L225) / [`load_recurring_templates`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L279-L298) / [`save_recurring_templates`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L300-L317)): 각 설정 파일들에 대해 덮어쓰기 도중 크래시를 방지하기 위해 일괄 원자적 임시 쓰기 치환 전략을 활용하여 상태를 물리 디스크에 영구 기입합니다.
+    - [`get_next_transaction_id`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L227-L252) / [`get_next_recurring_id`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/repository.py#L254-L277): 중복 없는 안전 식별자 채번을 보장하기 위해 기존 파일 데이터의 최댓값을 기준값 삼아 안전 증분 수치를 리턴합니다.
 
 #### 3. [service.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py) (비즈니스 도메인 서비스 계층)
 이 파일은 가계부의 데이터 유효성 검사, 필터링, 정렬, 리포트 집계 연산 등 가계부 도메인의 모든 비즈니스 규칙 및 정책을 주도하는 중추 연산 계층입니다.
-* **`BudgetService` 클래스**:
+* **`BudgetService` 클래스 ([service.py:L25](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L25))**:
   - **역할**: 입력 데이터 엄격 검증, 정렬 버퍼 억제, 통계 수치 연산, CSV 임포트/익스포트 조율, Zip 압축 백업, 반복 일괄 생성 제어 등 시나리오 제어기를 구축합니다.
   - **주요 멤버 변수**: `repository` (의존성 주입(`DI`)을 통해 연결된 `FileRepository` 인스턴스).
   - **핵심 메서드**:
-    - `add_transaction(self, ...)`: 거래 필드 규약 유효성을 먼저 검증하고 저장소로부터 ID 채번 후 객체 생성을 연계하여 기록 지시를 전달합니다.
-    - `list_transactions(self, limit: int) -> List[Transaction]`: 저장소 스트림을 순회하며 최신순 정렬 기준에 맞춰 지정한 크기(`limit`)만큼만 저장할 수 있는 최신순 삽입 정렬 공간인 **정렬 버퍼(Sorted Insertion Buffer)** 기법을 사용하여, O(limit) 메모리 제약 조건을 완벽하게 고정하고 병목을 차단합니다.
-    - `search_transactions(self, ...)`: 다차원 검색 조건(날짜 구간, 거래 종류, 카테고리, 특정 태그 목록, 메모 키워드 매칭) 필터를 실시간 스트리밍에 통과시켜 정렬 리스트로 반환합니다.
-    - `update_transaction()` / `delete_transaction()`: ID 존재 여부를 식별하고 정보 갱신을 지시합니다.
-    - `add_category()` / `remove_category()`: 카테고리를 통제합니다. 특히 카테고리 삭제 요청 시 가계부 데이터 스트림을 전수 조회하여 해당 카테고리가 1번이라도 활용 기록이 남아있다면 삭제 작업을 오류로 차단하는 **참조 무결성 검증**을 주관합니다.
-    - `get_monthly_summary(self, month: str, top_n: int) -> dict`: 특정 연월의 수입, 지출, 잔액을 도출하고 budgets 파일에서 한도액을 찾아내어 **예산 소모율 및 초과 여부 경고(Warning)**를 연산합니다. 지출 통계 랭킹도 추출합니다.
-    - `export_to_csv()` / `import_from_csv()`: 6열 규격 표준에 따른 CSV 입출력을 담당하며, CSV 임포트 시 유효하지 않은 데이터 줄이 혼입되어 있는 경우 스킵 처리 후 부분 성공 리포트 통계를 반환합니다.
-    - `create_backup() -> str`: 가계부 4대 JSONL 파일을 타임스탬프 구분자 이름으로 `zipfile` 모듈을 이용하여 backups 폴더에 아카이빙합니다.
-    - `generate_recurring_transactions(self, month: str) -> int`: 특정 연월에 고정 반복 템플릿들을 일괄 자동 거래로 생성합니다. 이때 중복 기입을 차단하기 위해 동일 날짜, 카테고리, 액수, 메모와 `recurring` 태그 기준의 **중복 가산 검사 필터링**을 단행합니다.
+    - [`add_transaction()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L41-L68): 거래 필드 규약 유효성을 먼저 검증하고 저장소로부터 ID 채번 후 객체 생성을 연계하여 기록 지시를 전달합니다.
+    - [`list_transactions()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L70-L96): 저장소 스트림을 순회하며 최신순 정렬 기준에 맞춰 지정한 크기(`limit`)만큼만 저장할 수 있는 최신순 삽입 정렬 공간인 **정렬 버퍼(Sorted Insertion Buffer)** 기법을 사용하여, O(limit) 메모리 제약 조건을 완벽하게 고정하고 병목을 차단합니다.
+    - [`search_transactions()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L98-L150): 다차원 검색 조건(날짜 구간, 거래 종류, 카테고리, 특정 태그 목록, 메모 키워드 매칭) 필터를 실시간 스트리밍에 통과시켜 정렬 리스트로 반환합니다.
+    - [`update_transaction()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L152-L179) / [`delete_transaction()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L180-L191): ID 존재 여부를 식별하고 정보 갱신을 지시합니다.
+    - 카테고리 관리 함수군 ([`add_category`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L194-L212) / [`remove_category`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L223-L245)): 카테고리를 통제합니다. 특히 카테고리 삭제 요청 시 가계부 데이터 스트림을 전수 조회하여 해당 카테고리가 1번이라도 활용 기록이 남아있다면 삭제 작업을 오류로 차단하는 **참조 무결성 검증**([`is_category_in_use`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L247-L260))을 주관합니다.
+    - [`get_monthly_summary()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L279-L325): 특정 연월의 수입, 지출, 잔액을 도출하고 budgets 파일에서 한도액을 찾아내어 **예산 소모율 및 초과 여부 경고(Warning)**를 연산합니다. 지출 통계 랭킹도 추출합니다.
+    - CSV 입출력 함수군 ([`export_to_csv`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L328-L365) / [`import_from_csv`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L368-L439)): 6열 규격 표준에 따른 CSV 입출력을 담당하며, CSV 임포트 시 유효하지 않은 데이터 줄이 혼입되어 있는 경우 스킵 처리 후 부분 성공 리포트 통계를 반환합니다.
+    - [`create_backup()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L441-L469): 가계부 4대 JSONL 파일을 타임스탬프 구분자 이름으로 `zipfile` 모듈을 이용하여 backups 폴더에 아카이빙합니다.
+    - [`generate_recurring_transactions()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/service.py#L546-L614): 특정 연월에 고정 반복 템플릿들을 일괄 자동 거래로 생성합니다. 이때 중복 기입을 차단하기 위해 동일 날짜, 카테고리, 액수, 메모와 `recurring` 태그 기준의 **중복 가산 검사 필터링**을 단행합니다.
 
 #### 4. [cli.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py) (프레젠테이션 / UI 계층)
 이 파일은 사용자의 조작(키 입력, 인자값 전달, 화면 출력)을 관리하고 가이드하는 사용자 인터페이스 계층으로, 콘솔 입출력 UX를 제어합니다.
-* **`CommandCompleter` 클래스**:
+* **`CommandCompleter` 클래스 ([cli.py:L74](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L74))**:
   - **역할**: 파이썬 표준 라이브러리인 `readline` 패키지와 연동하여 대화형 셸에서 사용자가 `Tab` 키를 입력할 때 가계부 15대 서브 명령어가 유기적으로 리스트 자동완성 제어가 이루어지도록 유도합니다.
-* **`InteractiveShell` 클래스**:
+* **`InteractiveShell` 클래스 ([cli.py:L476](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L476))**:
   - **역할**: 이중 실행 모드 분기(대화형 셸 루프 진입 vs 단발 CLI 명령어 즉시 실행), 사용자 입력 보정 및 가이드, 콘솔 드로잉 테이블 표의 가폭 정렬 처리를 전담합니다.
   - **주요 멤버 변수**: `service` (의존성 주입된 `BudgetService` 인스턴스), `commands` (허용 명령어 리스트).
   - **핵심 메서드**:
-    - `run(self)`: 대화형 셸(`budget_app>`)의 무한 루프를 기동합니다. 매 턴마다 입력 중 한글 상태에 의한 한타 오타 발생을 원천 차단하기 위해 macOS 시스템 API를 바인딩하여 영문 입력 소스로 강제 스위칭하는 `switch_to_english()`를 가동합니다.
-    - `execute_command(self, command: str, args)`: CLI 파라미터 인자가 명령줄에 붙어 들어온 경우, 대화형 셸을 생략하고 옵션 인자 기반으로 단발 실행 후 우아하게 프로세스를 반환하도록 라우팅합니다.
-    - `prompt_validated_input(self, ...)`: 입력이 생략되었을 때(엔터키 입력) 추천 제안이나 기본값으로 자동 전환하고, `[정보]` 경고문을 띄워 어떤 상태로 폴백 처리되었는지 통지합니다.
-    - `print_aligned_rows(self, headers, rows)`: CJK 가폭 보정 터미널 테이블 정렬기입니다. `unicodedata.east_asian_width`를 판별하여 동아시아 한글의 시각적 너비를 2칸(Wide)으로 보정해 계산하는 **가폭 보정 패딩 알고리즘**을 통해 테이블의 정렬 컬럼 줄이 깨지지 않고 깔끔히 일직선으로 그려지도록 만듭니다.
+    - [`run()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L659-L704): 대화형 셸(`budget_app>`)의 무한 루프를 기동합니다. 매 턴마다 입력 중 한글 상태에 의한 한타 오타 발생을 원천 차단하기 위해 macOS 시스템 API를 바인딩하여 영문 입력 소스로 강제 스위칭하는 [`switch_to_english()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L38-L83)를 가동합니다.
+    - [`execute_command()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L745-L921): CLI 파라미터 인자가 명령줄에 붙어 들어온 경우, 대화형 셸을 생략하고 옵션 인자 기반으로 단발 실행 후 우아하게 프로세스를 반환하도록 라우팅합니다.
+    - [`prompt_validated_input()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L948-L968): 입력이 생략되었을 때(엔터키 입력) 추천 제안이나 기본값으로 자동 전환하고, `[정보]` 경고문을 띄워 어떤 상태로 폴백 처리되었는지 통지합니다.
+    - [`print_aligned_rows()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L331-L364): CJK 가폭 보정 터미널 테이블 정렬기입니다. [`visual_len()`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/cli.py#L298-L316)을 판별하여 동아시아 한글의 시각적 너비를 2칸(Wide)으로 보정해 계산하는 **가폭 보정 패딩 알고리즘**을 통해 테이블의 정렬 컬럼 줄이 깨지지 않고 깔끔히 일직선으로 그려지도록 만듭니다.
 
 #### 5. [decorators.py](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py) (공통 횡단 관심사 / 데코레이터 측면)
 * 비즈니스 및 프레젠테이션 계층 전반에 걸쳐 사용되는 관점 지향 프로그래밍(AOP)용 기능들입니다.
-* `catch_errors`: 최상위 CLI 셸 및 실행 경계 영역에서 런타임 오류(데이터 유효성 위반, 권한 거부 등)가 발생해 프로그램이 완전히 튕기거나 비정상 크래시 종료가 되는 현상을 가로채 차단하며, 사용자 맞춤식 **[오류] / [힌트]** 메시지만을 정돈하여 띄우고 가계부 셸 제어권을 정상 안전 복구시켜 무한 루프를 보호합니다.
-* `measure_time`: 비즈니스 로직 연산이 수행되는 경과 시간을 ms(밀리초) 단위로 정밀 추적 계측하여 디버그용 stderr 로그로 통제 출력합니다.
-* `log_action`: 기능의 시작과 끝 라이프사이클 이행 로그를 관리합니다.
+* [`catch_errors`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L20-L47): 최상위 CLI 셸 및 실행 경계 영역에서 런타임 오류(데이터 유효성 위반, 권한 거부 등)가 발생해 프로그램이 완전히 튕기거나 비정상 크래시 종료가 되는 현상을 가로채 차단하며, 사용자 맞춤식 **[오류] / [힌트]** 메시지만을 정돈하여 띄우고 가계부 셸 제어권을 정상 안전 복구시켜 무한 루프를 보호합니다.
+* [`measure_time`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L49-L66): 비즈니스 로직 연산이 수행되는 경과 시간을 ms(밀리초) 단위로 정밀 추적 계측하여 디버그용 stderr 로그로 통제 출력합니다.
+* [`log_action`](file:///Users/mpeg46551/codyssey/b2_1/budget_app/decorators.py#L68-L86): 기능의 시작과 끝 라이프사이클 이행 로그를 관리합니다.
 
 ### 📊 모듈별 완성도 평가
 | 모듈명 | 분석 및 완성도 평가 | 점수 |
